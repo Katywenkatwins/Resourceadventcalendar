@@ -125,7 +125,8 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
   };
 
   useEffect(() => {
-    const adventStart = new Date('2024-12-01T00:00:00');
+    // Адвент-календар стартує 1 грудня 2025
+    const adventStart = new Date('2025-12-01T00:00:00');
     
     const timer = setInterval(() => {
       const now = new Date();
@@ -268,7 +269,7 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
 
             {/* Timer */}
             <div className="max-w-2xl mx-auto bg-white/70 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-xl border-2 mx-4" style={{ borderColor: 'rgba(45,90,61,0.13)' }}>
-              <p className="text-lg sm:text-xl mb-4" style={{ color: '#2d5a3d', fontFamily: 'Arial, sans-serif' }}>Стартуємо 1 грудня</p>
+              <p className="text-lg sm:text-xl mb-4" style={{ color: '#2d5a3d', fontFamily: 'Arial, sans-serif' }}>Стартуємо 1 грудня 2025</p>
               <div className="grid grid-cols-4 gap-2 sm:gap-4">
                 {[
                   { label: 'Днів', value: timeLeft.days },
@@ -276,8 +277,8 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
                   { label: 'Хвилин', value: timeLeft.minutes },
                   { label: 'Секунд', value: timeLeft.seconds },
                 ].map((item) => (
-                  <div key={item.label} className="text-center">
-                    <div className="text-3xl sm:text-4xl md:text-5xl mb-2" style={{ color: '#d94a4a', fontFamily: 'Arial, sans-serif' }}>
+                  <div key={item.label} className="text-center bg-gradient-to-br from-white to-gray-50 rounded-xl p-3 shadow-md border" style={{ borderColor: 'rgba(217,74,74,0.2)' }}>
+                    <div className="text-3xl sm:text-4xl md:text-5xl mb-2 tabular-nums" style={{ color: '#d94a4a', fontFamily: 'Arial, sans-serif' }}>
                       {String(item.value).padStart(2, '0')}
                     </div>
                     <div className="text-xs sm:text-sm" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>{item.label}</div>

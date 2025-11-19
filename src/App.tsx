@@ -1,12 +1,13 @@
 import { useState, useEffect, createContext, useContext } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams } from 'react-router';
 import { LandingPage } from './components/LandingPage';
 import { AuthPage } from './components/AuthPage';
 import { PricingPage } from './components/PricingPage';
-import { CalendarView } from './components/CalendarView';
-import { DayContent } from './components/DayContent';
-import { AdminPanel } from './components/AdminPanel';
 import { PaymentSuccess } from './components/PaymentSuccess';
+import { DayContent } from './components/DayContent';
+import { CalendarView } from './components/CalendarView';
+import { AdminPanel } from './components/AdminPanel';
+import { KVFormatTest } from './components/KVFormatTest';
 import { createClient } from './utils/supabase/client';
 import { projectId } from './utils/supabase/info';
 
@@ -119,26 +120,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const markDayCompleted = async (day: number) => {
+    console.log('markDayCompleted - Starting for day:', day);
+    
     const newCompleted = new Set(completedDays);
     newCompleted.add(day);
     setCompletedDays(newCompleted);
+    
+    console.log('markDayCompleted - Updated local state. All completed:', Array.from(newCompleted));
 
     // Update progress on backend
     try {
       const accessToken = localStorage.getItem('advent_access_token');
-      await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-dc8cbf1f/progress`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({ day }),
-        }
-      );
+      console.log('markDayCompleted - Access token exists:', !!accessToken);
+      
+      const url = `https://${projectId}.supabase.co/functions/v1/make-server-dc8cbf1f/progress`;
+      console.log('markDayCompleted - Sending request to:', url);
+      console.log('markDayCompleted - Request body:', { day });
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ day }),
+      });
+      
+      console.log('markDayCompleted - Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('markDayCompleted - Backend error:', errorText);
+        throw new Error(`Backend returned ${response.status}: ${errorText}`);
+      }
+      
+      const result = await response.json();
+      console.log('markDayCompleted - Success! Backend response:', result);
+      
+      // Оновити профіль після успішного збереження
+      await checkAuth();
+      console.log('markDayCompleted - Profile refreshed');
+      
     } catch (error) {
-      console.error('Error updating progress:', error);
+      console.error('markDayCompleted - Error:', error);
+      alert('Помилка при збереженні прогресу. Будь ласка, спробуйте ще раз.');
     }
   };
 
@@ -409,6 +434,11 @@ function AppContent() {
         <Route path="/calendar" element={<CalendarRoute />} />
         <Route path="/day/:day" element={<DayRoute />} />
         <Route path="/admin" element={<AdminRoute />} />
+        <Route path="/test-kv" element={
+          <div className="min-h-screen bg-[#faf8f5] p-8">
+            <KVFormatTest />
+          </div>
+        } />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <DebugInfo />

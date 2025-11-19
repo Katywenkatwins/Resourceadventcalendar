@@ -5,6 +5,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 import * as kv from "./kv_store.tsx";
 import wayforpayRoutes from "./wayforpay.tsx";
 import emailRoutes from "./email.tsx";
+import dayContentRoutes from "./day-content.tsx";
 
 const app = new Hono();
 
@@ -246,34 +247,67 @@ app.get("/make-server-dc8cbf1f/profile", async (c) => {
 // Update progress
 app.post("/make-server-dc8cbf1f/progress", async (c) => {
   try {
+    console.log('Progress update - Starting');
     const user = await verifyUser(c.req.header('Authorization'));
     if (!user) {
+      console.log('Progress update - User not authorized');
       return c.json({ error: 'Unauthorized' }, 401);
     }
+
+    console.log('Progress update - User:', user.id);
 
     const body = await c.req.json();
     const { day } = body;
 
+    console.log('Progress update - Day to mark:', day);
+
     if (!day || day < 1 || day > 24) {
+      console.log('Progress update - Invalid day:', day);
       return c.json({ error: 'Invalid day' }, 400);
     }
 
     const userData = await kv.get(`user:${user.id}`);
+    console.log('Progress update - Current user data:', userData);
+    
     if (!userData) {
-      return c.json({ error: 'User data not found' }, 404);
+      console.log('Progress update - User data not found, creating new');
+      // Створюємо нові дані користувача, якщо їх немає
+      const newUserData = {
+        id: user.id,
+        email: user.email,
+        name: user.user_metadata?.name || '',
+        tier: user.user_metadata?.tier || 'basic',
+        payment_status: user.user_metadata?.payment_status || 'pending',
+        progress: [day],
+        created_at: new Date().toISOString(),
+        last_activity: new Date().toISOString()
+      };
+      
+      await kv.set(`user:${user.id}`, newUserData);
+      console.log('Progress update - Created new user data with progress:', newUserData.progress);
+      
+      return c.json({ success: true, progress: newUserData.progress });
     }
 
     const progress = userData.progress || [];
+    console.log('Progress update - Current progress:', progress);
+    
     if (!progress.includes(day)) {
       progress.push(day);
       progress.sort((a: number, b: number) => a - b);
+      console.log('Progress update - New progress after adding day:', progress);
+    } else {
+      console.log('Progress update - Day already in progress');
     }
 
-    await kv.set(`user:${user.id}`, {
+    const updatedData = {
       ...userData,
       progress,
       last_activity: new Date().toISOString(),
-    });
+    };
+
+    await kv.set(`user:${user.id}`, updatedData);
+    console.log('Progress update - Saved updated data');
 
     return c.json({ success: true, progress });
   } catch (error) {
@@ -455,5 +489,51 @@ app.route("/make-server-dc8cbf1f", wayforpayRoutes);
 
 // Mount Email routes with prefix
 app.route("/make-server-dc8cbf1f", emailRoutes);
+
+// Mount Day Content routes with prefix
+app.route("/make-server-dc8cbf1f/content", dayContentRoutes);
+
+// 🧪 DEBUG: Test KV store format
+app.post("/make-server-dc8cbf1f/test-kv-format", async (c) => {
+  try {
+    console.log('=== KV FORMAT TEST ===');
+    
+    const testData = {
+      id: 'test-123',
+      email: 'test@example.com',
+      name: 'Test User',
+      progress: [1, 2, 3],
+      tier: 'basic'
+    };
+    
+    console.log('Test data type:', typeof testData);
+    console.log('Test data:', testData);
+    
+    // Test write
+    await kv.set('test:kv-format', testData);
+    console.log('✅ KV set complete');
+    
+    // Test read
+    const retrieved = await kv.get('test:kv-format');
+    console.log('Retrieved type:', typeof retrieved);
+    console.log('Retrieved data:', retrieved);
+    
+    // Cleanup
+    await kv.del('test:kv-format');
+    
+    return c.json({ 
+      success: true,
+      original: testData,
+      retrieved: retrieved,
+      types: {
+        original: typeof testData,
+        retrieved: typeof retrieved
+      }
+    });
+  } catch (error) {
+    console.error('KV test error:', error);
+    return c.json({ error: error.message }, 500);
+  }
+});
 
 Deno.serve(app.fetch);

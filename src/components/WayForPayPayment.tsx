@@ -187,19 +187,19 @@ export function WayForPayPayment({ tier, userEmail, onSuccess, onCancel }: WayFo
     }
   }, []);
 
-  if (paymentStatus === 'success') {
-    // Auto-call onSuccess after showing success message
-    useEffect(() => {
-      if (onSuccess) {
-        console.log('Payment success - calling onSuccess after 2 seconds');
-        const timeout = setTimeout(() => {
-          console.log('Executing onSuccess callback now');
-          onSuccess();
-        }, 2000);
-        return () => clearTimeout(timeout);
-      }
-    }, [onSuccess]);
+  // Auto-call onSuccess after showing success message
+  useEffect(() => {
+    if (paymentStatus === 'success' && onSuccess) {
+      console.log('Payment success - calling onSuccess after 2 seconds');
+      const timeout = setTimeout(() => {
+        console.log('Executing onSuccess callback now');
+        onSuccess();
+      }, 2000);
+      return () => clearTimeout(timeout);
+    }
+  }, [paymentStatus, onSuccess]);
 
+  if (paymentStatus === 'success') {
     return (
       <div className="text-center space-y-4 p-8 bg-white/70 rounded-3xl border-2" style={{ borderColor: 'rgba(45,90,61,0.13)' }}>
         <div className="flex justify-center">

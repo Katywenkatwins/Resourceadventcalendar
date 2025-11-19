@@ -1,231 +1,158 @@
-// =============================================================================
-// BUNDLE FILE FOR MANUAL DEPLOYMENT TO SUPABASE EDGE FUNCTIONS
-// =============================================================================
-// Instructions:
-// 1. Go to: https://supabase.com/dashboard/project/rypfeuayzgbpxxkffrao/functions
-// 2. Click "Create a new function"
-// 3. Name: make-server-dc8cbf1f
-// 4. Copy this entire file content
-// 5. Deploy
-// =============================================================================
+// Це bundle файл для деплою на Supabase Edge Functions
+// Скопіюйте весь вміст цього файлу в Supabase Dashboard → Edge Functions → make-server-dc8cbf1f
 
-import { Hono } from "npm:hono";
-import { cors } from "npm:hono/cors";
-import { logger } from "npm:hono/logger";
-import { createClient } from "jsr:@supabase/supabase-js@2";
-import { createHmac } from "node:crypto";
+import { Hono } from 'https://deno.land/x/hono@v3.11.7/mod.ts';
+import { cors } from 'https://deno.land/x/hono@v3.11.7/middleware.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
+import { createHmac } from 'node:crypto';
 
 const app = new Hono();
 
-// =============================================================================
-// MIDDLEWARE
-// =============================================================================
+// Enable logger
+app.use('*', async (c, next) => {
+  console.log(`${c.req.method} ${c.req.url}`);
+  await next();
+});
 
-app.use('*', logger(console.log));
+// Enable CORS
+app.use('/*', cors({
+  origin: '*',
+  allowHeaders: ['Content-Type', 'Authorization'],
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  exposeHeaders: ['Content-Length'],
+  maxAge: 600,
+}));
 
-app.use(
-  "/*",
-  cors({
-    origin: "*",
-    allowHeaders: ["Content-Type", "Authorization"],
-    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    exposeHeaders: ["Content-Length"],
-    maxAge: 600,
-  }),
-);
-
-// =============================================================================
-// HELPER FUNCTIONS
-// =============================================================================
-
-const getSupabaseAdmin = () => {
+// ========== KV STORE UTILITIES ==========
+const getSupabase = () => {
   return createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   );
 };
 
-const getSupabaseClient = () => {
-  return createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-  );
-};
+const kv = {
+  async get(key: string) {
+    const supabase = getSupabase();
+    const { data, error } = await supabase
+      .from('kv_store_dc8cbf1f')
+      .select('value')
+      .eq('key', key)
+      .maybeSingle();
+    
+    if (error) {
+      console.error(`KV get error for key ${key}:`, error);
+      return null;
+    }
+    
+    // Повертаємо value as-is (вже JSONB)
+    const value = data?.value || null;
+    console.log(`KV get - key: ${key}, value type:`, typeof value, 'is null:', value === null);
+    return value;
+  },
 
-async function verifyUser(authHeader: string | null) {
-  if (!authHeader) {
-    console.log('verifyUser - No auth header');
-    return null;
+  async set(key: string, value: any) {
+    const supabase = getSupabase();
+    
+    // ВАЖЛИВО: НЕ робимо JSON.stringify! Supabase автоматично конвертує в JSONB
+    // Якщо value вже рядок - це помилка!
+    if (typeof value === 'string') {
+      console.error(`KV set - ERROR: value is string, should be object! key: ${key}`);
+      throw new Error('KV set: value must be an object, not a string');
+    }
+    
+    console.log(`KV set - key: ${key}`);
+    console.log(`KV set - value type:`, typeof value);
+    console.log(`KV set - value preview:`, { 
+      id: value.id, 
+      email: value.email, 
+      progress: value.progress 
+    });
+    
+    const { error } = await supabase
+      .from('kv_store_dc8cbf1f')
+      .upsert({
+        key,
+        value: value  // Передаємо об'єкт напряму, БЕЗ JSON.stringify
+      });
+    
+    if (error) {
+      console.error(`KV set error for key ${key}:`, error);
+      throw error;
+    }
+    
+    console.log(`KV set - SUCCESS for key: ${key}`);
+  },
+
+  async del(key: string) {
+    const supabase = getSupabase();
+    const { error } = await supabase
+      .from('kv_store_dc8cbf1f')
+      .delete()
+      .eq('key', key);
+    
+    if (error) throw error;
+    console.log(`KV del - deleted key: ${key}`);
+  },
+
+  async getByPrefix(prefix: string) {
+    const supabase = getSupabase();
+    const { data, error } = await supabase
+      .from('kv_store_dc8cbf1f')
+      .select('value')
+      .like('key', `${prefix}%`);
+    
+    if (error) {
+      console.error(`KV getByPrefix error for prefix ${prefix}:`, error);
+      return [];
+    }
+    
+    const values = data?.map(row => row.value) || [];
+    console.log(`KV getByPrefix - prefix: ${prefix}, found: ${values.length} records`);
+    return values;
   }
+};
+
+// ========== AUTH UTILITIES ==========
+async function verifyUser(authHeader: string | null) {
+  if (!authHeader) return null;
   
   const token = authHeader.split(' ')[1];
-  if (!token) {
-    console.log('verifyUser - No token in header');
-    return null;
-  }
+  if (!token) return null;
 
-  console.log('verifyUser - Token:', token.substring(0, 20) + '...');
-
-  const supabase = getSupabaseAdmin();
+  const supabase = getSupabase();
   const { data: { user }, error } = await supabase.auth.getUser(token);
   
-  if (error) {
-    console.log('verifyUser - Auth error:', error.message);
-    return null;
-  }
-  
-  if (!user) {
-    console.log('verifyUser - No user found');
-    return null;
-  }
-  
-  console.log('verifyUser - User verified:', user.id, user.email);
+  if (error || !user) return null;
   return user;
 }
 
-// =============================================================================
-// KV STORE FUNCTIONS
-// =============================================================================
+// ========== ROUTES ==========
 
-const kvClient = () => createClient(
-  Deno.env.get("SUPABASE_URL"),
-  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"),
-);
-
-const kvSet = async (key: string, value: any): Promise<void> => {
-  const supabase = kvClient()
-  const { error } = await supabase.from("kv_store_dc8cbf1f").upsert({
-    key,
-    value
-  });
-  if (error) {
-    throw new Error(error.message);
-  }
-};
-
-const kvGet = async (key: string): Promise<any> => {
-  const supabase = kvClient()
-  const { data, error } = await supabase.from("kv_store_dc8cbf1f").select("value").eq("key", key).maybeSingle();
-  if (error) {
-    throw new Error(error.message);
-  }
-  return data?.value;
-};
-
-const kvDel = async (key: string): Promise<void> => {
-  const supabase = kvClient()
-  const { error } = await supabase.from("kv_store_dc8cbf1f").delete().eq("key", key);
-  if (error) {
-    throw new Error(error.message);
-  }
-};
-
-const kvGetByPrefix = async (prefix: string): Promise<any[]> => {
-  const supabase = kvClient()
-  const { data, error } = await supabase.from("kv_store_dc8cbf1f").select("key, value").like("key", prefix + "%");
-  if (error) {
-    throw new Error(error.message);
-  }
-  return data?.map((d) => d.value) ?? [];
-};
-
-// =============================================================================
-// EMAIL FUNCTIONS
-// =============================================================================
-
-const RESEND_API_KEY = Deno.env.get('ADVENT_RESEND_API_KEY') || Deno.env.get('RESEND_API_KEY') || Deno.env.get('ADVENT-RESEND-API-KEY');
-
-async function sendEmail(to: string, subject: string, html: string) {
-  if (!RESEND_API_KEY) {
-    console.error('RESEND_API_KEY not configured');
-    return { success: false, error: 'Email service not configured' };
-  }
-
-  try {
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${RESEND_API_KEY}`
-      },
-      body: JSON.stringify({
-        from: 'Адвент-календар <noreply@adventresurs.space>',
-        to: [to],
-        subject: subject,
-        html: html
-      })
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error('Resend API error:', data);
-      return { success: false, error: data.message || 'Failed to send email' };
-    }
-
-    console.log('Email sent successfully:', data);
-    return { success: true, data };
-  } catch (error) {
-    console.error('Email sending error:', error);
-    return { success: false, error: error.message || 'Failed to send email' };
-  }
-}
-
-function getWelcomeEmailTemplate(name: string, email: string) {
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family: Arial, sans-serif; line-height: 1.6; color: #1e3a5f; background-color: #e8e4e1;"><div style="max-width: 600px; margin: 40px auto; background: white; border-radius: 24px; padding: 40px;"><h1>✨ Вітаємо в Адвент-календарі!</h1><h2>Привіт, ${name}! 🎄</h2><p>Дякуємо, що приєдналися до проєкту <strong>"24 кроки до нового себе"</strong>!</p><p>Ви успішно зареєструвалися з email: <strong>${email}</strong></p></div></body></html>`;
-}
-
-// =============================================================================
-// WAYFORPAY FUNCTIONS
-// =============================================================================
-
-const MERCHANT_LOGIN = 'adventresurs_space';
-const MERCHANT_SECRET_KEY = Deno.env.get('WAYFORPAY_MERCHANT_PASSWORD') || '99a97987a610ae0f7443d490a994e8c9fb211900';
-
-function generateSignature(fields: string[]): string {
-  const signatureString = fields.join(';');
-  return createHmac('md5', MERCHANT_SECRET_KEY)
-    .update(signatureString)
-    .digest('hex');
-}
-
-// =============================================================================
-// ROUTES
-// =============================================================================
-
-// Health check
-app.get("/make-server-dc8cbf1f/health", (c) => {
+app.get('/make-server-dc8cbf1f/health', (c) => {
   return c.json({ 
-    status: "ok", 
+    status: 'ok', 
     timestamp: new Date().toISOString(),
-    project: "advent-calendar-2024" 
+    project: 'advent-calendar-2025'
   });
 });
 
 // Sign up
-app.post("/make-server-dc8cbf1f/signup", async (c) => {
+app.post('/make-server-dc8cbf1f/signup', async (c) => {
   try {
-    const body = await c.req.json();
-    const { email, password, name } = body;
+    const { email, password, name } = await c.req.json();
 
     if (!email || !password || !name) {
       return c.json({ error: 'Email, password and name are required' }, 400);
     }
 
-    const supabase = getSupabaseAdmin();
+    const supabase = getSupabase();
     
     const { data: existingUsers } = await supabase.auth.admin.listUsers();
     const existingUser = existingUsers?.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
     
-    if (existingUser) {
-      const isAdventUser = existingUser.user_metadata?.project === 'advent-calendar';
-      
-      if (isAdventUser) {
-        return c.json({ error: 'A user with this email address has already been registered' }, 400);
-      } else {
-        console.log('User exists in another project:', email);
-        return c.json({ error: 'Email already registered in another project. Please use a different email or contact support.' }, 400);
-      }
+    if (existingUser?.user_metadata?.project === 'advent-calendar') {
+      return c.json({ error: 'A user with this email address has already been registered' }, 400);
     }
     
     const { data, error } = await supabase.auth.admin.createUser({
@@ -241,12 +168,11 @@ app.post("/make-server-dc8cbf1f/signup", async (c) => {
     });
 
     if (error) {
-      console.log('Signup error:', error);
       return c.json({ error: error.message }, 400);
     }
 
     if (data.user) {
-      await kvSet(`user:${data.user.id}`, {
+      await kv.set(`user:${data.user.id}`, {
         id: data.user.id,
         email,
         name,
@@ -255,12 +181,6 @@ app.post("/make-server-dc8cbf1f/signup", async (c) => {
         created_at: new Date().toISOString(),
         project: 'advent-calendar',
       });
-      
-      fetch(`https://${Deno.env.get('SUPABASE_URL')?.replace('https://', '')}/functions/v1/make-server-dc8cbf1f/send-welcome`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, name })
-      }).catch(err => console.error('Failed to send welcome email:', err));
     }
 
     return c.json({ 
@@ -278,21 +198,14 @@ app.post("/make-server-dc8cbf1f/signup", async (c) => {
 });
 
 // Get profile
-app.get("/make-server-dc8cbf1f/profile", async (c) => {
+app.get('/make-server-dc8cbf1f/profile', async (c) => {
   try {
-    const authHeader = c.req.header('Authorization');
-    console.log('Profile request - Auth header present:', !!authHeader);
-    
-    const user = await verifyUser(authHeader);
+    const user = await verifyUser(c.req.header('Authorization'));
     if (!user) {
-      console.log('Profile request - User verification failed');
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
-    console.log('Profile request - User verified:', user.id);
-
-    const userData = await kvGet(`user:${user.id}`);
-    console.log('Profile request - KV data:', userData);
+    const userData = await kv.get(`user:${user.id}`);
     
     const profile = {
       id: user.id,
@@ -305,7 +218,6 @@ app.get("/make-server-dc8cbf1f/profile", async (c) => {
       payment_date: user.user_metadata?.payment_date || userData?.payment_date,
     };
 
-    console.log('Profile request - Returning profile:', profile);
     return c.json(profile);
   } catch (error) {
     console.error('Profile fetch error:', error);
@@ -313,62 +225,93 @@ app.get("/make-server-dc8cbf1f/profile", async (c) => {
   }
 });
 
-// Send welcome email
-app.post('/make-server-dc8cbf1f/send-welcome', async (c) => {
+// Update progress
+app.post('/make-server-dc8cbf1f/progress', async (c) => {
   try {
-    const { email, name } = await c.req.json();
+    console.log('Progress update - Starting');
+    const user = await verifyUser(c.req.header('Authorization'));
+    if (!user) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const { day } = await c.req.json();
+    console.log('Progress update - Day:', day, 'User:', user.id);
+
+    if (!day || day < 1 || day > 24) {
+      return c.json({ error: 'Invalid day' }, 400);
+    }
+
+    let userData = await kv.get(`user:${user.id}`);
+    console.log('Progress update - Current userData:', userData);
     
-    if (!email || !name) {
-      return c.json({ error: 'Email and name are required' }, 400);
+    if (!userData) {
+      userData = {
+        id: user.id,
+        email: user.email,
+        name: user.user_metadata?.name || '',
+        tier: user.user_metadata?.tier || 'basic',
+        payment_status: user.user_metadata?.payment_status || 'pending',
+        progress: [],
+        created_at: new Date().toISOString(),
+      };
     }
 
-    const result = await sendEmail(
-      email,
-      '🎄 Вітаємо в Адвент-календарі трансформації!',
-      getWelcomeEmailTemplate(name, email)
-    );
-
-    if (!result.success) {
-      return c.json({ error: result.error }, 500);
+    const progress = userData.progress || [];
+    
+    if (!progress.includes(day)) {
+      progress.push(day);
+      progress.sort((a, b) => a - b);
     }
 
-    return c.json({ success: true });
+    const updatedData = {
+      ...userData,
+      progress,
+      last_activity: new Date().toISOString(),
+    };
+
+    await kv.set(`user:${user.id}`, updatedData);
+    console.log('Progress update - Saved. New progress:', progress);
+
+    return c.json({ success: true, progress });
   } catch (error) {
-    console.error('Welcome email error:', error);
-    return c.json({ error: 'Failed to send welcome email' }, 500);
+    console.error('Progress update error:', error);
+    return c.json({ error: 'Failed to update progress' }, 500);
   }
 });
 
 // Admin: Get all users
-app.get("/make-server-dc8cbf1f/admin/users", async (c) => {
+app.get('/make-server-dc8cbf1f/admin/users', async (c) => {
   try {
     const user = await verifyUser(c.req.header('Authorization'));
     const userEmail = (user?.email || '').toLowerCase().trim();
-    const adminEmail = 'katywenka@gmail.com';
     
-    console.log('Admin check - User email:', user?.email, 'Normalized:', userEmail, 'Is admin:', userEmail === adminEmail);
-    
-    if (!user || userEmail !== adminEmail) {
+    if (userEmail !== 'katywenka@gmail.com') {
       return c.json({ error: 'Unauthorized - Admin only' }, 403);
     }
 
-    const supabase = getSupabaseAdmin();
-    const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
-    
-    if (authError) {
-      console.error('Error fetching auth users:', authError);
-      return c.json({ error: 'Failed to fetch auth users' }, 500);
-    }
+    console.log('Admin users - Starting');
 
-    const kvUsers = await kvGetByPrefix('user:');
+    const supabase = getSupabase();
+    const { data: authUsers } = await supabase.auth.admin.listUsers();
+    console.log('Admin users - Auth users count:', authUsers?.users.length);
+    
+    const kvUsers = await kv.getByPrefix('user:');
+    console.log('Admin users - KV users count:', kvUsers.length);
+    console.log('Admin users - KV users data:', JSON.stringify(kvUsers, null, 2));
     
     const kvUsersMap = new Map();
     kvUsers.forEach((kvUser: any) => {
+      console.log('Admin users - Mapping KV user:', kvUser.id, 'Progress:', kvUser.progress);
       kvUsersMap.set(kvUser.id, kvUser);
     });
 
-    const allUsers = authUsers.users.map((authUser: any) => {
+    const allUsers = authUsers?.users.map((authUser: any) => {
       const kvUser = kvUsersMap.get(authUser.id);
+      console.log('Admin users - Auth user:', authUser.id, 'Has KV data:', !!kvUser);
+      
+      if (kvUser) {
+        console.log('Admin users - KV user progress:', kvUser.progress);
+      }
       
       return {
         id: authUser.id,
@@ -381,20 +324,106 @@ app.get("/make-server-dc8cbf1f/admin/users", async (c) => {
         payment_date: authUser.user_metadata?.payment_date || kvUser?.payment_date,
         project: authUser.user_metadata?.project,
       };
-    });
+    }) || [];
     
     const adventUsers = allUsers.filter((u: any) => u.project === 'advent-calendar');
+    console.log('Admin users - Advent users:', adventUsers.length);
     
-    console.log('Admin fetched users:', allUsers.length, 'Advent users:', adventUsers.length);
     return c.json({ users: adventUsers });
   } catch (error) {
     console.error('Admin users fetch error:', error);
-    return c.json({ error: `Failed to fetch users: ${error.message}` }, 500);
+    return c.json({ error: 'Failed to fetch users' }, 500);
   }
 });
 
-// =============================================================================
-// START SERVER
-// =============================================================================
+// Admin: Update user
+app.put('/make-server-dc8cbf1f/admin/users/:userId', async (c) => {
+  try {
+    const user = await verifyUser(c.req.header('Authorization'));
+    if ((user?.email || '').toLowerCase().trim() !== 'katywenka@gmail.com') {
+      return c.json({ error: 'Unauthorized - Admin only' }, 403);
+    }
+
+    const userId = c.req.param('userId');
+    const body = await c.req.json();
+
+    const userData = await kv.get(`user:${userId}`);
+    if (!userData) {
+      return c.json({ error: 'User not found' }, 404);
+    }
+
+    const updatedData = {
+      ...userData,
+      ...body,
+      updated_at: new Date().toISOString(),
+    };
+
+    await kv.set(`user:${userId}`, updatedData);
+
+    if (body.tier || body.payment_status) {
+      const supabase = getSupabase();
+      await supabase.auth.admin.updateUserById(userId, {
+        user_metadata: {
+          ...userData,
+          ...body,
+        }
+      });
+    }
+
+    return c.json({ success: true, user: updatedData });
+  } catch (error) {
+    console.error('Admin user update error:', error);
+    return c.json({ error: 'Failed to update user' }, 500);
+  }
+});
+
+// Mount WayForPay routes
+app.route("/make-server-dc8cbf1f", wayforpayRoutes);
+
+// Mount Email routes
+app.route("/make-server-dc8cbf1f", emailRoutes);
+
+// 🧪 DEBUG: Test KV store format
+app.post("/make-server-dc8cbf1f/test-kv-format", async (c) => {
+  try {
+    console.log('=== KV FORMAT TEST ===');
+    
+    const testData = {
+      id: 'test-123',
+      email: 'test@example.com',
+      name: 'Test User',
+      progress: [1, 2, 3],
+      tier: 'basic'
+    };
+    
+    console.log('Test data type:', typeof testData);
+    console.log('Test data:', testData);
+    
+    // Test write
+    await kv.set('test:kv-format', testData);
+    console.log('✅ KV set complete');
+    
+    // Test read
+    const retrieved = await kv.get('test:kv-format');
+    console.log('Retrieved type:', typeof retrieved);
+    console.log('Retrieved data:', retrieved);
+    
+    // Cleanup
+    await kv.del('test:kv-format');
+    
+    return c.json({ 
+      success: true,
+      original: testData,
+      retrieved: retrieved,
+      types: {
+        original: typeof testData,
+        retrieved: typeof retrieved
+      }
+    });
+  } catch (error) {
+    console.error('KV test error:', error);
+    return c.json({ error: error.message }, 500);
+  }
+});
 
 Deno.serve(app.fetch);

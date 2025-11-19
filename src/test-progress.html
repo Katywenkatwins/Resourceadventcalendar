@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Progress Test</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Progress Update Test</h1>
+    
+    <div>
+        <label>Access Token:</label><br>
+        <input type="text" id="token" style="width: 500px" placeholder="Paste your access token from localStorage">
+    </div>
+    
+    <div style="margin-top: 20px;">
+        <button onclick="testProgress(1)">Test Day 1</button>
+        <button onclick="testProgress(5)">Test Day 5</button>
+        <button onclick="getProfile()">Get Profile</button>
+    </div>
+    
+    <div style="margin-top: 20px;">
+        <h3>Response:</h3>
+        <pre id="response"></pre>
+    </div>
+
+    <script>
+        const projectId = 'rypfeuayzgbpxxkffrao';
+        
+        function log(message, isError = false) {
+            const el = document.getElementById('response');
+            const className = isError ? 'error' : 'success';
+            el.innerHTML += `<div class="${className}">${message}</div>`;
+            console.log(message);
+        }
+
+        async function testProgress(day) {
+            document.getElementById('response').innerHTML = '';
+            
+            const token = document.getElementById('token').value || localStorage.getItem('advent_access_token');
+            
+            if (!token) {
+                log('Error: No access token provided!', true);
+                return;
+            }
+            
+            log(`Testing progress update for day ${day}...`);
+            
+            try {
+                const url = `https://${projectId}.supabase.co/functions/v1/make-server-dc8cbf1f/progress`;
+                log(`URL: ${url}`);
+                log(`Token: ${token.substring(0, 20)}...`);
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({ day }),
+                });
+                
+                log(`Response status: ${response.status}`);
+                
+                const text = await response.text();
+                log(`Response body: ${text}`);
+                
+                if (response.ok) {
+                    const data = JSON.parse(text);
+                    log(`Success! Progress: ${JSON.stringify(data.progress)}`);
+                } else {
+                    log(`Error: ${text}`, true);
+                }
+            } catch (error) {
+                log(`Exception: ${error.message}`, true);
+            }
+        }
+        
+        async function getProfile() {
+            document.getElementById('response').innerHTML = '';
+            
+            const token = document.getElementById('token').value || localStorage.getItem('advent_access_token');
+            
+            if (!token) {
+                log('Error: No access token provided!', true);
+                return;
+            }
+            
+            log('Fetching profile...');
+            
+            try {
+                const url = `https://${projectId}.supabase.co/functions/v1/make-server-dc8cbf1f/profile`;
+                
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                    },
+                });
+                
+                log(`Response status: ${response.status}`);
+                
+                const text = await response.text();
+                log(`Response body: ${text}`);
+                
+                if (response.ok) {
+                    const data = JSON.parse(text);
+                    log(`Progress from profile: ${JSON.stringify(data.progress)}`);
+                    log(`Full profile: ${JSON.stringify(data, null, 2)}`);
+                }
+            } catch (error) {
+                log(`Exception: ${error.message}`, true);
+            }
+        }
+        
+        // Auto-load token from localStorage
+        window.addEventListener('load', () => {
+            const token = localStorage.getItem('advent_access_token');
+            if (token) {
+                document.getElementById('token').value = token;
+                log('Token loaded from localStorage');
+            }
+        });
+    </script>
+</body>
+</html>

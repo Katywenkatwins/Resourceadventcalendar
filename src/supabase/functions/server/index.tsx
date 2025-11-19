@@ -3,6 +3,8 @@ import { cors } from "npm:hono/cors";
 import { logger } from "npm:hono/logger";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import * as kv from "./kv_store.tsx";
+import wayforpayRoutes from "./wayforpay.tsx";
+import emailRoutes from "./email.tsx";
 
 const app = new Hono();
 
@@ -71,20 +73,41 @@ async function verifyUser(authHeader: string | null) {
 
 // Health check endpoint
 app.get("/make-server-dc8cbf1f/health", (c) => {
-  return c.json({ status: "ok" });
+  return c.json({ 
+    status: "ok", 
+    timestamp: new Date().toISOString(),
+    project: "advent-calendar-2024" 
+  });
 });
 
 // Sign up endpoint
 app.post("/make-server-dc8cbf1f/signup", async (c) => {
   try {
     const body = await c.req.json();
-    const { email, password, name, tier = 'basic' } = body;
+    const { email, password, name } = body;
 
     if (!email || !password || !name) {
       return c.json({ error: 'Email, password and name are required' }, 400);
     }
 
     const supabase = getSupabaseAdmin();
+    
+    // Перевіряємо чи користувач вже існує
+    const { data: existingUsers } = await supabase.auth.admin.listUsers();
+    const existingUser = existingUsers?.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
+    
+    if (existingUser) {
+      // Перевіряємо чи це користувач адвент-календаря
+      const isAdventUser = existingUser.user_metadata?.project === 'advent-calendar';
+      
+      if (isAdventUser) {
+        return c.json({ error: 'A user with this email address has already been registered' }, 400);
+      } else {
+        // Користувач з іншого проєкту - можемо перезаписати або повернути помилку
+        console.log('User exists in another project:', email);
+        return c.json({ error: 'Email already registered in another project. Please use a different email or contact support.' }, 400);
+      }
+    }
     
     // Create user with auto-confirmed email
     const { data, error } = await supabase.auth.admin.createUser({
@@ -93,9 +116,9 @@ app.post("/make-server-dc8cbf1f/signup", async (c) => {
       email_confirm: true, // Auto-confirm email since email server hasn't been configured
       user_metadata: {
         name,
-        tier,
         payment_status: 'pending',
         created_at: new Date().toISOString(),
+        project: 'advent-calendar', // Маркер проєкту для фільтрації
       }
     });
 
@@ -110,11 +133,18 @@ app.post("/make-server-dc8cbf1f/signup", async (c) => {
         id: data.user.id,
         email,
         name,
-        tier,
         payment_status: 'pending',
         progress: [],
         created_at: new Date().toISOString(),
+        project: 'advent-calendar',
       });
+      
+      // Send welcome email (non-blocking)
+      fetch(`https://${Deno.env.get('SUPABASE_URL')?.replace('https://', '')}/functions/v1/make-server-dc8cbf1f/send-welcome`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, name })
+      }).catch(err => console.error('Failed to send welcome email:', err));
     }
 
     return c.json({ 
@@ -198,7 +228,7 @@ app.get("/make-server-dc8cbf1f/profile", async (c) => {
       id: user.id,
       email: user.email,
       name: user.user_metadata?.name || userData?.name || '',
-      tier: user.user_metadata?.tier || userData?.tier || 'basic',
+      tier: user.user_metadata?.tier || userData?.tier,
       payment_status: user.user_metadata?.payment_status || userData?.payment_status || 'pending',
       progress: userData?.progress || [],
       created_at: userData?.created_at,
@@ -265,11 +295,46 @@ app.get("/make-server-dc8cbf1f/admin/users", async (c) => {
       return c.json({ error: 'Unauthorized - Admin only' }, 403);
     }
 
-    // Get all users from KV store
-    const allUsers = await kv.getByPrefix('user:');
+    // Get all users from Supabase Auth
+    const supabase = getSupabaseAdmin();
+    const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
     
-    console.log('Admin fetched users:', allUsers.length);
-    return c.json({ users: allUsers });
+    if (authError) {
+      console.error('Error fetching auth users:', authError);
+      return c.json({ error: 'Failed to fetch auth users' }, 500);
+    }
+
+    // Get all users from KV store
+    const kvUsers = await kv.getByPrefix('user:');
+    
+    // Create a map of KV users by ID for quick lookup
+    const kvUsersMap = new Map();
+    kvUsers.forEach((kvUser: any) => {
+      kvUsersMap.set(kvUser.id, kvUser);
+    });
+
+    // Merge auth users with KV data
+    const allUsers = authUsers.users.map((authUser: any) => {
+      const kvUser = kvUsersMap.get(authUser.id);
+      
+      return {
+        id: authUser.id,
+        email: authUser.email,
+        name: authUser.user_metadata?.name || kvUser?.name || 'Без імені',
+        tier: authUser.user_metadata?.tier || kvUser?.tier,
+        payment_status: authUser.user_metadata?.payment_status || kvUser?.payment_status || 'pending',
+        progress: kvUser?.progress || [],
+        created_at: authUser.created_at || kvUser?.created_at,
+        payment_date: authUser.user_metadata?.payment_date || kvUser?.payment_date,
+        project: authUser.user_metadata?.project, // Додаємо маркер проєкту
+      };
+    });
+    
+    // Фільтруємо тільки користувачів адвент-календаря
+    const adventUsers = allUsers.filter((u: any) => u.project === 'advent-calendar');
+    
+    console.log('Admin fetched users:', allUsers.length, 'Advent users:', adventUsers.length);
+    return c.json({ users: adventUsers });
   } catch (error) {
     console.error('Admin users fetch error:', error);
     return c.json({ error: `Failed to fetch users: ${error.message}` }, 500);
@@ -348,5 +413,47 @@ app.delete("/make-server-dc8cbf1f/admin/users/:userId", async (c) => {
     return c.json({ error: 'Failed to delete user' }, 500);
   }
 });
+
+// Admin: Mark user as advent-calendar user
+app.post("/make-server-dc8cbf1f/admin/mark-advent-user/:userId", async (c) => {
+  try {
+    const user = await verifyUser(c.req.header('Authorization'));
+    const userEmail = (user?.email || '').toLowerCase().trim();
+    const adminEmail = 'katywenka@gmail.com';
+    
+    if (!user || userEmail !== adminEmail) {
+      return c.json({ error: 'Unauthorized - Admin only' }, 403);
+    }
+
+    const userId = c.req.param('userId');
+    const supabase = getSupabaseAdmin();
+    
+    // Get user data
+    const { data: userData, error: getUserError } = await supabase.auth.admin.getUserById(userId);
+    
+    if (getUserError || !userData.user) {
+      return c.json({ error: 'User not found' }, 404);
+    }
+
+    // Update user metadata with project marker
+    await supabase.auth.admin.updateUserById(userId, {
+      user_metadata: {
+        ...userData.user.user_metadata,
+        project: 'advent-calendar',
+      }
+    });
+
+    return c.json({ success: true, message: 'User marked as advent-calendar user' });
+  } catch (error) {
+    console.error('Mark advent user error:', error);
+    return c.json({ error: 'Failed to mark user' }, 500);
+  }
+});
+
+// Mount WayForPay routes with prefix
+app.route("/make-server-dc8cbf1f", wayforpayRoutes);
+
+// Mount Email routes with prefix
+app.route("/make-server-dc8cbf1f", emailRoutes);
 
 Deno.serve(app.fetch);

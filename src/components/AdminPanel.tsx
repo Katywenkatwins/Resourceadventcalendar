@@ -131,9 +131,72 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
       }
 
       loadUsers();
+      alert('Користувача успішно видалено');
     } catch (error) {
       console.error('Error deleting user:', error);
       alert('Помилка видалення користувача');
+    }
+  };
+
+  const handleDeleteIncompleteUsers = async () => {
+    const incompleteUsers = users.filter(u => !u.name || u.name === 'Без імені');
+    
+    if (incompleteUsers.length === 0) {
+      alert('Немає користувачів без даних');
+      return;
+    }
+
+    if (!confirm(`Ви впевнені, що хочете видалити ${incompleteUsers.length} користувачів без даних?`)) {
+      return;
+    }
+
+    try {
+      const accessToken = localStorage.getItem('advent_access_token');
+      
+      // Delete users one by one
+      for (const user of incompleteUsers) {
+        await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-dc8cbf1f/admin/users/${user.id}`,
+          {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+            },
+          }
+        );
+      }
+
+      loadUsers();
+      alert(`Успішно видалено ${incompleteUsers.length} користувачів`);
+    } catch (error) {
+      console.error('Error deleting incomplete users:', error);
+      alert('Помилка видалення користувачів');
+    }
+  };
+
+  const handleMarkAsAdventUser = async (userId: string) => {
+    try {
+      const accessToken = localStorage.getItem('advent_access_token');
+      
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-dc8cbf1f/admin/mark-advent-user/${userId}`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to mark user');
+      }
+
+      loadUsers();
+      alert('Користувача позначено як користувача адвент-календаря');
+    } catch (error) {
+      console.error('Error marking user:', error);
+      alert('Помилка позначення користувача');
     }
   };
 
@@ -177,9 +240,19 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
               Адмін панель
             </h1>
           </div>
-          <Button onClick={loadUsers} variant="outline">
-            Оновити
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              onClick={handleDeleteIncompleteUsers} 
+              variant="destructive"
+              className="bg-red-600 hover:bg-red-700"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Очистити неповні
+            </Button>
+            <Button onClick={loadUsers} variant="outline">
+              Оновити
+            </Button>
+          </div>
         </div>
 
         <Card>

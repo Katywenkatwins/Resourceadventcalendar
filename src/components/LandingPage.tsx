@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Button } from './ui/button';
-import { Sparkles, Gift, Heart, Target, Shield, Globe, CheckCircle2, Calendar, Star, Wind } from 'lucide-react';
+import { Sparkles, Gift, Heart, Target, Shield, Globe, CheckCircle2, Calendar, Star, Wind, LogIn } from 'lucide-react';
 import ChristmasTree from '../imports/Frame48097540';
 import ChristmasBalls from '../imports/Frame48097541';
 import CandyCane from '../imports/Vector';
@@ -13,6 +13,7 @@ import svgPaths from '../imports/svg-wnnef39ojp';
 interface LandingPageProps {
   onStart: () => void;
   isAuthenticated?: boolean;
+  isLoading?: boolean;
   onGoToCalendar?: () => void;
 }
 
@@ -102,7 +103,7 @@ function DecorativeGift() {
   );
 }
 
-export function LandingPage({ onStart, isAuthenticated, onGoToCalendar }: LandingPageProps) {
+export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalendar }: LandingPageProps) {
   const [timeLeft, setTimeLeft] = useState({
     days: 0,
     hours: 0,
@@ -188,6 +189,29 @@ export function LandingPage({ onStart, isAuthenticated, onGoToCalendar }: Landin
 
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#e8e4e1' }}>
+      {/* Login Button - Fixed Top Right - Show only when not loading and not authenticated */}
+      {!isLoading && !isAuthenticated && (
+        <div className="fixed top-4 sm:top-6 right-4 sm:right-6 z-50">
+          <Button
+            onClick={onStart}
+            size="lg"
+            className="px-4 sm:px-6 py-3 sm:py-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center gap-2"
+            style={{ backgroundColor: '#2d5a3d', color: 'white', fontFamily: 'Arial, sans-serif' }}
+          >
+            <LogIn className="w-5 h-5" />
+            <span className="hidden sm:inline">Увійти</span>
+          </Button>
+        </div>
+      )}
+
+      {!isLoading && !isAuthenticated && (
+        <div className="fixed top-4 sm:top-6 left-4 sm:left-6 z-50">
+          <div className="text-xl sm:text-2xl" style={{ color: '#2d5a3d', fontFamily: "'Dela Gothic One', sans-serif" }}>
+            Адвент-2025
+          </div>
+        </div>
+      )}
+
       {/* Декоративні фонові елементи */}
       <div className="fixed top-[-20px] left-0 opacity-20 pointer-events-none z-0">
         <ChristmasBalls />
@@ -475,7 +499,7 @@ export function LandingPage({ onStart, isAuthenticated, onGoToCalendar }: Landin
             
             <p className="text-base sm:text-lg leading-relaxed" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>
               <strong style={{ color: '#2d5a3d' }}>йога-інструкторів</strong>, <strong style={{ color: '#2d5a3d' }}>психологів</strong>, <strong style={{ color: '#2d5a3d' }}>астрологів</strong>, <strong style={{ color: '#2d5a3d' }}>нутріціологів</strong>, <strong style={{ color: '#2d5a3d' }}>експертів із краси</strong>, <strong style={{ color: '#2d5a3d' }}>стилю</strong>,
-              <strong style={{ color: '#2d5a3d' }}> енергопрактиків</strong>, <strong style={{ color: '#2d5a3d' }}>музикантів</strong>, <strong style={{ color: '#2d5a3d' }}>маркетологів</strong>, <strong style={{ color: '#2d5a3d' }}>арт-терапевтів</strong> і ще багатьох інших.
+              <strong style={{ color: '#2d5a3d' }}> енергопрактиків</strong>, <strong style={{ color: '#2d5a3d' }}>музикантів</strong>, <strong style={{ color: '#2d5a3d' }}>маркетологів</strong>, <strong style={{ color: '#2d5a3d' }}>арт-терапетів</strong> і ще багатьох інших.
             </p>
 
             <p className="text-lg sm:text-xl text-center pt-4" style={{ color: '#d94a4a', fontFamily: 'Arial, sans-serif' }}>
@@ -511,9 +535,9 @@ export function LandingPage({ onStart, isAuthenticated, onGoToCalendar }: Landin
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 px-4">
             {/* Basic Tier - Світло */}
-            <div className="bg-white/70 rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-xl border-2 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 relative overflow-hidden group"
+            <div className="bg-white/70 rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-xl border-2 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 relative overflow-hidden group flex flex-col"
                  style={{ borderColor: 'rgba(45,90,61,0.13)' }}>
-              <div className="relative space-y-4 sm:space-y-6">
+              <div className="relative space-y-4 sm:space-y-6 flex-grow">
                 <div>
                   <h3 className="text-2xl sm:text-3xl mb-2" style={{ color: '#2d5a3d', fontFamily: 'Arial, sans-serif', fontWeight: 'bold' }}>Світло</h3>
                   <div className="flex items-baseline gap-2">
@@ -524,7 +548,7 @@ export function LandingPage({ onStart, isAuthenticated, onGoToCalendar }: Landin
 
                 <div className="space-y-2 sm:space-y-3">
                   {[
-                    'Доступ до календаря',
+                    'Доступ до календаря на місяць',
                     'Щоденні практики',
                     'Базові матеріали від експертів',
                     'Трекер прогресу',
@@ -536,26 +560,26 @@ export function LandingPage({ onStart, isAuthenticated, onGoToCalendar }: Landin
                     </div>
                   ))}
                 </div>
-
-                <Button
-                  onClick={handleMainAction}
-                  className="w-full py-5 sm:py-6 text-base sm:text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
-                  style={{ backgroundColor: '#2d5a3d', color: 'white', fontFamily: 'Arial, sans-serif' }}
-                >
-                  {isAuthenticated ? 'Обрати тариф' : 'Взяти участь'}
-                </Button>
               </div>
+
+              <Button
+                onClick={handleMainAction}
+                className="w-full py-5 sm:py-6 text-base sm:text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 mt-6"
+                style={{ backgroundColor: '#2d5a3d', color: 'white', fontFamily: 'Arial, sans-serif' }}
+              >
+                {isAuthenticated ? 'Обрати тариф' : 'Взяти участь'}
+              </Button>
             </div>
 
             {/* Premium Tier - Магія */}
-            <div className="bg-white/70 rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-2xl border-4 hover:shadow-3xl transition-all duration-300 hover:-translate-y-2 relative overflow-visible group transform md:scale-105"
+            <div className="bg-white/70 rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-2xl border-4 hover:shadow-3xl transition-all duration-300 hover:-translate-y-2 relative overflow-visible group transform md:scale-105 flex flex-col"
                  style={{ borderColor: '#d94a4a' }}>
               <div className="absolute -top-3 sm:-top-4 right-3 sm:right-4 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm" 
                    style={{ backgroundColor: '#d94a4a', color: 'white', fontFamily: 'Arial, sans-serif' }}>
                 Популярний
               </div>
               
-              <div className="relative space-y-4 sm:space-y-6 mt-4">
+              <div className="relative space-y-4 sm:space-y-6 mt-4 flex-grow">
                 <div>
                   <h3 className="text-2xl sm:text-3xl mb-2" style={{ color: '#d94a4a', fontFamily: 'Arial, sans-serif', fontWeight: 'bold' }}>Магія</h3>
                   <div className="flex items-baseline gap-2">
@@ -568,8 +592,8 @@ export function LandingPage({ onStart, isAuthenticated, onGoToCalendar }: Landin
                   {[
                     'Все з тарифу "Світло"',
                     'Розширені PDF-гайди',
-                    'Додаткові відео від експертів',
-                    'Доступ до архіву практик',
+                    'Додаткові бонуси від експертів',
+                    'Доступ до всіх практик на 3 місяці',
                     'Щотижневі live-ефіри',
                     'Персональні рекомендації',
                   ].map((feature, idx) => (
@@ -579,23 +603,23 @@ export function LandingPage({ onStart, isAuthenticated, onGoToCalendar }: Landin
                     </div>
                   ))}
                 </div>
-
-                <Button
-                  onClick={handleMainAction}
-                  className="w-full py-5 sm:py-6 text-base sm:text-lg rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300"
-                  style={{ backgroundColor: '#d94a4a', color: 'white', fontFamily: 'Arial, sans-serif' }}
-                >
-                  {isAuthenticated ? 'Обрати тариф' : 'Взяти участь'}
-                </Button>
               </div>
+
+              <Button
+                onClick={handleMainAction}
+                className="w-full py-5 sm:py-6 text-base sm:text-lg rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 mt-6"
+                style={{ backgroundColor: '#d94a4a', color: 'white', fontFamily: 'Arial, sans-serif' }}
+              >
+                {isAuthenticated ? 'Обрати тариф' : 'Взяти участь'}
+              </Button>
             </div>
 
-            {/* VIP Tier - Чудо */}
-            <div className="bg-white/70 rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-xl border-2 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 relative overflow-hidden group"
+            {/* VIP Tier - Диво */}
+            <div className="bg-white/70 rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-xl border-2 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 relative overflow-hidden group flex flex-col"
                  style={{ borderColor: 'rgba(230,150,58,0.13)' }}>
-              <div className="relative space-y-4 sm:space-y-6">
+              <div className="relative space-y-4 sm:space-y-6 flex-grow">
                 <div>
-                  <h3 className="text-2xl sm:text-3xl mb-2" style={{ color: '#e6963a', fontFamily: 'Arial, sans-serif', fontWeight: 'bold' }}>Чудо</h3>
+                  <h3 className="text-2xl sm:text-3xl mb-2" style={{ color: '#e6963a', fontFamily: 'Arial, sans-serif', fontWeight: 'bold' }}>Диво</h3>
                   <div className="flex items-baseline gap-2">
                     <span className="text-4xl sm:text-5xl" style={{ color: '#e6963a', fontFamily: 'Arial, sans-serif' }}>€100</span>
                   </div>
@@ -606,8 +630,8 @@ export function LandingPage({ onStart, isAuthenticated, onGoToCalendar }: Landin
                   {[
                     'Все з тарифу "Магія"',
                     'VIP-доступ до всіх матеріалів',
-                    'Індивідуальна консультація',
-                    'Персональний план',
+                    'Індивідуальна консультація з одним з експертів',
+                    'Додаткові 3 ефіри з амбасадорами проєкту',
                     'Закрита VIP спільнота',
                     'Бонусні подарунки',
                     'Пріоритетна підтримка',
@@ -618,15 +642,15 @@ export function LandingPage({ onStart, isAuthenticated, onGoToCalendar }: Landin
                     </div>
                   ))}
                 </div>
-
-                <Button
-                  onClick={handleMainAction}
-                  className="w-full py-5 sm:py-6 text-base sm:text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
-                  style={{ backgroundColor: '#e6963a', color: 'white', fontFamily: 'Arial, sans-serif' }}
-                >
-                  {isAuthenticated ? 'Обрати тариф' : 'Взяти участь'}
-                </Button>
               </div>
+
+              <Button
+                onClick={handleMainAction}
+                className="w-full py-5 sm:py-6 text-base sm:text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 mt-6"
+                style={{ backgroundColor: '#e6963a', color: 'white', fontFamily: 'Arial, sans-serif' }}
+              >
+                {isAuthenticated ? 'Обрати тариф' : 'Взяти участь'}
+              </Button>
             </div>
           </div>
 

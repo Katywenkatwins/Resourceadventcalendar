@@ -6,6 +6,7 @@ import { PricingPage } from './components/PricingPage';
 import { CalendarView } from './components/CalendarView';
 import { DayContent } from './components/DayContent';
 import { AdminPanel } from './components/AdminPanel';
+import { PaymentSuccess } from './components/PaymentSuccess';
 import { createClient } from './utils/supabase/client';
 import { projectId } from './utils/supabase/info';
 
@@ -53,29 +54,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const checkAuth = async () => {
     try {
-      setIsLoading(true);
-      
-      // First, check if we have a valid Supabase session
-      const supabase = createClient();
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('checkAuth - Starting auth check');
+      const accessToken = localStorage.getItem('advent_access_token');
+      console.log('checkAuth - Access token present:', !!accessToken);
 
-      console.log('Session check:', { session, error: sessionError });
-
-      if (sessionError || !session) {
-        console.log('No valid session, clearing auth state');
-        localStorage.removeItem('advent_access_token');
+      if (!accessToken) {
+        console.log('checkAuth - No token, user not authenticated');
+        setIsLoading(false);
         setUserProfile(null);
         setIsAdmin(false);
-        setIsLoading(false);
+        setCompletedDays(new Set());
         return;
       }
 
-      // Update localStorage with current token
-      const accessToken = session.access_token;
-      localStorage.setItem('advent_access_token', accessToken);
-
-      // Get user profile from backend
-      console.log('Fetching profile with token...');
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-dc8cbf1f/profile`,
         {
@@ -85,32 +76,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       );
 
+      console.log('checkAuth - Profile response status:', response.status);
+
       if (!response.ok) {
-        console.error('Profile fetch failed:', response.status, response.statusText);
-        const errorText = await response.text();
-        console.error('Error response:', errorText);
-        throw new Error(`Failed to fetch profile: ${response.status}`);
+        console.log('checkAuth - Profile fetch failed, clearing auth');
+        localStorage.removeItem('advent_access_token');
+        setUserProfile(null);
+        setIsAdmin(false);
+        setCompletedDays(new Set());
+        setIsLoading(false);
+        return;
       }
 
       const profile = await response.json();
-      console.log('Profile fetched successfully:', profile);
-      
-      setUserProfile(profile);
-      setCompletedDays(new Set(profile.progress || []));
+      console.log('checkAuth - Profile data:', profile);
 
-      // Check if admin (case-insensitive)
-      const userEmail = (profile.email || '').toLowerCase().trim();
-      const adminEmail = 'katywenka@gmail.com';
-      
-      if (userEmail === adminEmail) {
-        setIsAdmin(true);
-      }
+      setUserProfile(profile);
+      setIsAdmin(profile.email?.toLowerCase() === 'katywenka@gmail.com');
+      setCompletedDays(new Set(profile.progress || []));
+      setIsLoading(false);
     } catch (error) {
       console.error('Auth check error:', error);
       localStorage.removeItem('advent_access_token');
       setUserProfile(null);
       setIsAdmin(false);
-    } finally {
+      setCompletedDays(new Set());
       setIsLoading(false);
     }
   };
@@ -148,7 +138,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       );
     } catch (error) {
-      console.error('Failed to update progress:', error);
+      console.error('Error updating progress:', error);
     }
   };
 
@@ -182,7 +172,7 @@ export function useAuth() {
 // Landing Route
 function LandingRoute() {
   const navigate = useNavigate();
-  const { userProfile } = useAuth();
+  const { userProfile, isLoading } = useAuth();
 
   const handleStart = () => {
     navigate('/auth');
@@ -200,6 +190,7 @@ function LandingRoute() {
     <LandingPage 
       onStart={handleStart}
       isAuthenticated={!!userProfile}
+      isLoading={isLoading}
       onGoToCalendar={handleGoToCalendar}
     />
   );
@@ -414,6 +405,7 @@ function AppContent() {
         <Route path="/" element={<LandingRoute />} />
         <Route path="/auth" element={<AuthRoute />} />
         <Route path="/pricing" element={<PricingRoute />} />
+        <Route path="/payment-success" element={<PaymentSuccess />} />
         <Route path="/calendar" element={<CalendarRoute />} />
         <Route path="/day/:day" element={<DayRoute />} />
         <Route path="/admin" element={<AdminRoute />} />

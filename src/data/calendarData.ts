@@ -10,6 +10,12 @@ export interface DayContent {
   videoUrl?: string;
 }
 
+export interface CalendarDay {
+  day: number;
+  position: { x: number; y: number };
+  size: { width: number; height: number };
+}
+
 // Card sizes: 810x810 (small), 810x1440 or 1440x810 (rectangle), 1440x1440 (large)
 const GAP = 60;
 const S = 810;   // Small

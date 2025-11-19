@@ -105,13 +105,18 @@ export function AuthPage({ onAuthSuccess, onBackToHome }: AuthPageProps) {
       });
 
       if (signInError) {
-        setError('Акаунт створено, але помилка входу. Спробуйте увійти вручну.');
+        setError(signInError.message);
+        console.error('Sign in error:', signInError);
         return;
       }
 
       if (signInData.session) {
+        console.log('Sign in successful, storing token and calling onAuthSuccess');
         localStorage.setItem('advent_access_token', signInData.session.access_token);
         onAuthSuccess();
+      } else {
+        console.error('No session in sign in response');
+        setError('Не вдалося створити сесію');
       }
     } catch (err) {
       setError('Помилка реєстрації. Спробуйте ще раз.');

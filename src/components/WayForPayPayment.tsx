@@ -275,6 +275,32 @@ export function WayForPayPayment({ tier, userEmail, onSuccess, onCancel }: WayFo
       )}
 
       <div className="space-y-3">
+        {/* Текст про згоду з документами */}
+        <div className="text-center text-sm px-2 pb-2" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>
+          <p>
+            Натискаючи кнопку оплати, ви погоджуєтесь з{' '}
+            <a 
+              href="/offer" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="underline hover:no-underline"
+              style={{ color: '#2d5a3d' }}
+            >
+              договором публічної оферти
+            </a>
+            {' '}та{' '}
+            <a 
+              href="/privacy-policy" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="underline hover:no-underline"
+              style={{ color: '#2d5a3d' }}
+            >
+              політикою конфіденційності
+            </a>
+          </p>
+        </div>
+
         <Button
           onClick={handlePayment}
           disabled={loading}

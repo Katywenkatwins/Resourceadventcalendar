@@ -1,11 +1,12 @@
-import { Hono } from "npm:hono";
-import { cors } from "npm:hono/cors";
-import { logger } from "npm:hono/logger";
-import { createClient } from "jsr:@supabase/supabase-js@2";
-import * as kv from "./kv_store.tsx";
-import wayforpayRoutes from "./wayforpay.tsx";
-import emailRoutes from "./email.tsx";
-import dayContentRoutes from "./day-content.tsx";
+import { Hono } from 'npm:hono@4.6.14';
+import { cors } from 'npm:hono/cors';
+import { logger } from 'npm:hono/logger';
+import { createClient } from 'jsr:@supabase/supabase-js@2.49.8';
+import * as kv from './kv_store.tsx';
+import wayforpayRoutes from './wayforpay.tsx';
+import emailRoutes from './email.tsx';
+import dayContentRoutes from './day-content.tsx';
+import { migrateUserData } from './migrate-users.tsx';
 
 const app = new Hono();
 
@@ -43,32 +44,21 @@ const getSupabaseClient = () => {
 // Helper to verify user from token
 async function verifyUser(authHeader: string | null) {
   if (!authHeader) {
-    console.log('verifyUser - No auth header');
     return null;
   }
   
   const token = authHeader.split(' ')[1];
   if (!token) {
-    console.log('verifyUser - No token in header');
     return null;
   }
-
-  console.log('verifyUser - Token:', token.substring(0, 20) + '...');
 
   const supabase = getSupabaseAdmin();
   const { data: { user }, error } = await supabase.auth.getUser(token);
   
-  if (error) {
-    console.log('verifyUser - Auth error:', error.message);
+  if (error || !user) {
     return null;
   }
   
-  if (!user) {
-    console.log('verifyUser - No user found');
-    return null;
-  }
-  
-  console.log('verifyUser - User verified:', user.id, user.email);
   return user;
 }
 
@@ -141,9 +131,15 @@ app.post("/make-server-dc8cbf1f/signup", async (c) => {
       });
       
       // Send welcome email (non-blocking)
-      fetch(`https://${Deno.env.get('SUPABASE_URL')?.replace('https://', '')}/functions/v1/make-server-dc8cbf1f/send-welcome`, {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+      const baseUrl = supabaseUrl.replace('https://', '').replace('http://', '');
+      
+      fetch(`https://${baseUrl}/functions/v1/make-server-dc8cbf1f/email/send-welcome`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`
+        },
         body: JSON.stringify({ email, name })
       }).catch(err => console.error('Failed to send welcome email:', err));
     }
@@ -212,18 +208,13 @@ app.post("/make-server-dc8cbf1f/confirm-payment", async (c) => {
 app.get("/make-server-dc8cbf1f/profile", async (c) => {
   try {
     const authHeader = c.req.header('Authorization');
-    console.log('Profile request - Auth header present:', !!authHeader);
     
     const user = await verifyUser(authHeader);
     if (!user) {
-      console.log('Profile request - User verification failed');
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
-    console.log('Profile request - User verified:', user.id);
-
     const userData = await kv.get(`user:${user.id}`);
-    console.log('Profile request - KV data:', userData);
     
     const profile = {
       id: user.id,
@@ -236,7 +227,6 @@ app.get("/make-server-dc8cbf1f/profile", async (c) => {
       payment_date: user.user_metadata?.payment_date || userData?.payment_date,
     };
 
-    console.log('Profile request - Returning profile:', profile);
     return c.json(profile);
   } catch (error) {
     console.error('Profile fetch error:', error);
@@ -247,30 +237,21 @@ app.get("/make-server-dc8cbf1f/profile", async (c) => {
 // Update progress
 app.post("/make-server-dc8cbf1f/progress", async (c) => {
   try {
-    console.log('Progress update - Starting');
     const user = await verifyUser(c.req.header('Authorization'));
     if (!user) {
-      console.log('Progress update - User not authorized');
       return c.json({ error: 'Unauthorized' }, 401);
     }
-
-    console.log('Progress update - User:', user.id);
 
     const body = await c.req.json();
     const { day } = body;
 
-    console.log('Progress update - Day to mark:', day);
-
     if (!day || day < 1 || day > 24) {
-      console.log('Progress update - Invalid day:', day);
       return c.json({ error: 'Invalid day' }, 400);
     }
 
     const userData = await kv.get(`user:${user.id}`);
-    console.log('Progress update - Current user data:', userData);
     
     if (!userData) {
-      console.log('Progress update - User data not found, creating new');
       // Створюємо нові дані користувача, якщо їх немає
       const newUserData = {
         id: user.id,
@@ -284,20 +265,14 @@ app.post("/make-server-dc8cbf1f/progress", async (c) => {
       };
       
       await kv.set(`user:${user.id}`, newUserData);
-      console.log('Progress update - Created new user data with progress:', newUserData.progress);
       
       return c.json({ success: true, progress: newUserData.progress });
     }
 
     const progress = userData.progress || [];
-    console.log('Progress update - Current progress:', progress);
-    
     if (!progress.includes(day)) {
       progress.push(day);
       progress.sort((a: number, b: number) => a - b);
-      console.log('Progress update - New progress after adding day:', progress);
-    } else {
-      console.log('Progress update - Day already in progress');
     }
 
     const updatedData = {
@@ -307,12 +282,119 @@ app.post("/make-server-dc8cbf1f/progress", async (c) => {
     };
 
     await kv.set(`user:${user.id}`, updatedData);
-    console.log('Progress update - Saved updated data');
 
     return c.json({ success: true, progress });
   } catch (error) {
     console.error('Progress update error:', error);
     return c.json({ error: 'Failed to update progress' }, 500);
+  }
+});
+
+// Check if day is accessible
+app.get("/make-server-dc8cbf1f/check-day/:day", async (c) => {
+  try {
+    const user = await verifyUser(c.req.header('Authorization'));
+    if (!user) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const day = parseInt(c.req.param('day'));
+    if (!day || day < 1 || day > 24) {
+      return c.json({ error: 'Invalid day' }, 400);
+    }
+
+    // Check if user is admin
+    const isAdmin = user.email?.toLowerCase() === 'katywenka@gmail.com';
+    
+    // Get calendar settings - використовуємо правильний ключ
+    const calendarConfig = await kv.get('calendar:config');
+    const startDate = calendarConfig?.startDate ? new Date(calendarConfig.startDate) : new Date(2024, 10, 15); // 15 листопада за замовчуванням
+    const manuallyUnlockedDays = calendarConfig?.manuallyUnlockedDays || [];
+    
+    console.log('Check day access:', { day, isAdmin, manuallyUnlockedDays, startDate });
+    
+    // Get user data
+    const userData = await kv.get(`user:${user.id}`);
+    const progress = userData?.progress || [];
+    
+    const today = new Date();
+    const daysPassed = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    
+    // Check if day is accessible
+    let isAccessible = false;
+    let reason = '';
+    
+    // Admin always has access
+    if (isAdmin) {
+      isAccessible = true;
+      reason = 'admin';
+    }
+    // ТІЛЬКИ вручну розблоковані дні доступні для звичайних користувачів
+    else if (manuallyUnlockedDays.includes(day)) {
+      isAccessible = true;
+      reason = 'manually_unlocked';
+    }
+    // Всі інші дні заблоковані
+    else {
+      isAccessible = false;
+      reason = 'day_locked';
+    }
+    
+    return c.json({ 
+      accessible: isAccessible, 
+      reason,
+      daysPassed,
+      progress,
+      startDate: startDate.toISOString(),
+      manuallyUnlockedDays // для дебагу
+    });
+  } catch (error) {
+    console.error('Check day error:', error);
+    return c.json({ error: 'Failed to check day accessibility' }, 500);
+  }
+});
+
+// Get list of unlocked days (for all users)
+app.get("/make-server-dc8cbf1f/unlocked-days", async (c) => {
+  try {
+    const user = await verifyUser(c.req.header('Authorization'));
+    if (!user) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    // Get calendar config from KV
+    const calendarConfig = await kv.get('calendar:config');
+    const manuallyUnlockedDays = calendarConfig?.manuallyUnlockedDays || [];
+    
+    console.log('Unlocked days requested:', manuallyUnlockedDays);
+
+    return c.json({ 
+      days: manuallyUnlockedDays
+    });
+  } catch (error) {
+    console.error('Get unlocked days error:', error);
+    return c.json({ error: 'Failed to get unlocked days' }, 500);
+  }
+});
+
+// ADMIN: Migrate user data
+app.post("/make-server-dc8cbf1f/migrate-users", async (c) => {
+  try {
+    const user = await verifyUser(c.req.header('Authorization'));
+    const userEmail = (user?.email || '').toLowerCase().trim();
+    const adminEmail = 'katywenka@gmail.com';
+    
+    if (!user || userEmail !== adminEmail) {
+      return c.json({ error: 'Unauthorized - Admin only' }, 403);
+    }
+
+    console.log('Starting user migration...');
+    const result = await migrateUserData();
+    
+    return c.json(result);
+  } catch (error) {
+    console.error('Migration endpoint error:', error);
+    return c.json({ error: 'Failed to run migration' }, 500);
   }
 });
 
@@ -481,6 +563,65 @@ app.post("/make-server-dc8cbf1f/admin/mark-advent-user/:userId", async (c) => {
   } catch (error) {
     console.error('Mark advent user error:', error);
     return c.json({ error: 'Failed to mark user' }, 500);
+  }
+});
+
+// Admin: Get calendar config
+app.get("/make-server-dc8cbf1f/admin/calendar-config", async (c) => {
+  try {
+    const user = await verifyUser(c.req.header('Authorization'));
+    const userEmail = (user?.email || '').toLowerCase().trim();
+    const adminEmail = 'katywenka@gmail.com';
+    
+    if (!user || userEmail !== adminEmail) {
+      return c.json({ error: 'Unauthorized - Admin only' }, 403);
+    }
+
+    // Get calendar config from KV
+    const config = await kv.get('calendar:config');
+    
+    // Default config if not exists
+    const defaultConfig = {
+      startDate: '2024-12-01',
+      manuallyUnlockedDays: [],
+    };
+
+    return c.json({ 
+      config: config || defaultConfig 
+    });
+  } catch (error) {
+    console.error('Get calendar config error:', error);
+    return c.json({ error: 'Failed to get calendar config' }, 500);
+  }
+});
+
+// Admin: Save calendar config
+app.post("/make-server-dc8cbf1f/admin/calendar-config", async (c) => {
+  try {
+    const user = await verifyUser(c.req.header('Authorization'));
+    const userEmail = (user?.email || '').toLowerCase().trim();
+    const adminEmail = 'katywenka@gmail.com';
+    
+    if (!user || userEmail !== adminEmail) {
+      return c.json({ error: 'Unauthorized - Admin only' }, 403);
+    }
+
+    const body = await c.req.json();
+    const { config } = body;
+
+    if (!config) {
+      return c.json({ error: 'Config is required' }, 400);
+    }
+
+    // Save to KV
+    await kv.set('calendar:config', config);
+    
+    console.log('Calendar config saved:', config);
+
+    return c.json({ success: true, config });
+  } catch (error) {
+    console.error('Save calendar config error:', error);
+    return c.json({ error: 'Failed to save calendar config' }, 500);
   }
 });
 

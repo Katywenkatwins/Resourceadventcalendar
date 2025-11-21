@@ -1,11 +1,18 @@
 import { Hono } from 'npm:hono';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { createHmac } from 'node:crypto';
+import * as kv from './kv_store.tsx';
 
 const app = new Hono();
 
 const MERCHANT_LOGIN = 'adventresurs_space';
 const MERCHANT_SECRET_KEY = Deno.env.get('WAYFORPAY_MERCHANT_PASSWORD') || '99a97987a610ae0f7443d490a994e8c9fb211900';
+
+console.log('WayForPay config:', {
+  merchantLogin: MERCHANT_LOGIN,
+  secretKeySet: !!MERCHANT_SECRET_KEY,
+  secretKeyLength: MERCHANT_SECRET_KEY?.length
+});
 
 // Функція для генерації підпису WayForPay
 function generateSignature(fields: (string | number)[]): string {
@@ -75,26 +82,16 @@ app.post('/payment/init', async (c) => {
 
     const merchantSignature = generateSignature(signatureFields);
 
-    // Зберігання інформації про платіж у БД
-    const { error: kvError } = await supabase
-      .from('kv_store_dc8cbf1f')
-      .upsert({
-        key: `payment:${orderReference}`,
-        value: JSON.stringify({
-          userId: user.id,
-          email: email || user.email,
-          tier,
-          amount,
-          status: 'pending',
-          createdAt: new Date().toISOString(),
-          orderReference
-        })
-      });
-
-    if (kvError) {
-      console.error('Error saving payment info:', kvError);
-      return c.json({ error: 'Failed to save payment info' }, 500);
-    }
+    // Зберігання інформації про платіж у БД - використовуємо kv.set
+    await kv.set(`payment:${orderReference}`, {
+      userId: user.id,
+      email: email || user.email,
+      tier,
+      amount,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      orderReference
+    });
 
     // Формування даних для WayForPay
     const paymentData = {
@@ -162,19 +159,16 @@ app.post('/payment/callback', async (c) => {
     }
 
     // Отримання інформації про платіж з БД
-    const { data: paymentData, error: fetchError } = await supabase
-      .from('kv_store_dc8cbf1f')
-      .select('value')
-      .eq('key', `payment:${orderReference}`)
-      .single();
+    const paymentData = await kv.get(`payment:${orderReference}`);
 
-    if (fetchError || !paymentData) {
+    if (!paymentData) {
       console.error('Payment not found:', orderReference);
       return c.json({ orderReference, status: 'failure', reason: 'Payment not found' });
     }
 
-    const payment = JSON.parse(paymentData.value);
-
+    // Якщо дані вже є об'єктом - використовуємо як є, якщо ні - парсимо
+    const payment = typeof paymentData === 'string' ? JSON.parse(paymentData) : paymentData;
+    
     // Оновлення статусу платежу
     if (transactionStatus === 'Approved') {
       // Успішна оплата - оновлюємо тариф користувача
@@ -237,31 +231,35 @@ app.post('/payment/callback', async (c) => {
       }
 
       // Оновлення статусу платежу
-      await supabase
-        .from('kv_store_dc8cbf1f')
-        .upsert({
-          key: `payment:${orderReference}`,
-          value: JSON.stringify({
-            ...payment,
-            status: 'completed',
-            transactionStatus,
-            completedAt: new Date().toISOString(),
-            transactionId: callbackData.transactionId
-          })
-        });
+      await kv.upsert({
+        key: `payment:${orderReference}`,
+        value: JSON.stringify({
+          ...payment,
+          status: 'completed',
+          transactionStatus,
+          completedAt: new Date().toISOString(),
+          transactionId: callbackData.transactionId
+        })
+      });
 
       console.log(`Payment approved for user ${payment.userId}, tier: ${payment.tier}`);
 
       // Відправка email про успішну оплату (non-blocking)
       const tierNames = { basic: 'Світло', deep: 'Магія', premium: 'Диво' };
       
-      // Отримати дані користувача для email
+      // Отримати дані кор��стувача для email
       const { data: { user: userInfo } } = await supabaseAdmin.auth.admin.getUserById(payment.userId);
       
       if (userInfo) {
-        fetch(`https://${Deno.env.get('SUPABASE_URL')?.replace('https://', '')}/functions/v1/make-server-dc8cbf1f/send-payment-success`, {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+        const baseUrl = supabaseUrl.replace('https://', '').replace('http://', '');
+        
+        fetch(`https://${baseUrl}/functions/v1/make-server-dc8cbf1f/email/send-payment-success`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`
+          },
           body: JSON.stringify({
             email: userInfo.email,
             name: userInfo.user_metadata?.name || 'Користувач',
@@ -279,19 +277,17 @@ app.post('/payment/callback', async (c) => {
 
     } else {
       // Неуспішна оплата
-      await supabase
-        .from('kv_store_dc8cbf1f')
-        .upsert({
-          key: `payment:${orderReference}`,
-          value: JSON.stringify({
-            ...payment,
-            status: 'failed',
-            transactionStatus,
-            reason,
-            reasonCode,
-            failedAt: new Date().toISOString()
-          })
-        });
+      await kv.upsert({
+        key: `payment:${orderReference}`,
+        value: JSON.stringify({
+          ...payment,
+          status: 'failed',
+          transactionStatus,
+          reason,
+          reasonCode,
+          failedAt: new Date().toISOString()
+        })
+      });
 
       console.log(`Payment failed for user ${payment.userId}: ${reason}`);
 
@@ -325,11 +321,7 @@ app.get('/payment/status/:orderReference', async (c) => {
 
     const orderReference = c.req.param('orderReference');
 
-    const { data: paymentData, error } = await supabase
-      .from('kv_store_dc8cbf1f')
-      .select('value')
-      .eq('key', `payment:${orderReference}`)
-      .single();
+    const { data: paymentData, error } = await kv.get(`payment:${orderReference}`);
 
     if (error || !paymentData) {
       return c.json({ error: 'Payment not found' }, 404);
@@ -365,11 +357,7 @@ app.get('/user/tier', async (c) => {
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
-    const { data: tierData, error } = await supabase
-      .from('kv_store_dc8cbf1f')
-      .select('value')
-      .eq('key', `user_tier:${user.id}`)
-      .single();
+    const { data: tierData, error } = await kv.get(`user_tier:${user.id}`);
 
     if (error || !tierData) {
       return c.json({ success: true, tier: null });
@@ -514,9 +502,15 @@ app.post('/payment/demo-success', async (c) => {
     const tierNames = { basic: 'Світло', deep: 'Магія', premium: 'Диво' };
     const tierPrices = { basic: 10, deep: 35, premium: 100 };
     
-    fetch(`https://${Deno.env.get('SUPABASE_URL')?.replace('https://', '')}/functions/v1/make-server-dc8cbf1f/send-payment-success`, {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+    const baseUrl = supabaseUrl.replace('https://', '').replace('http://', '');
+    
+    fetch(`https://${baseUrl}/functions/v1/make-server-dc8cbf1f/email/send-payment-success`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`
+      },
       body: JSON.stringify({
         email: user.email,
         name: user.user_metadata?.name || 'Користувач',
@@ -609,13 +603,11 @@ app.post('/payment/create', async (c) => {
       orderReference
     };
 
-    const { error: kvError } = await supabase
-      .from('kv_store_dc8cbf1f')
-      .upsert({
-        key: `payment:${orderReference}`,
-        value: paymentInfo,
-        updated_at: new Date().toISOString()
-      });
+    const { error: kvError } = await kv.upsert({
+      key: `payment:${orderReference}`,
+      value: paymentInfo,
+      updated_at: new Date().toISOString()
+    });
 
     if (kvError) {
       console.error('Error saving payment info:', kvError);

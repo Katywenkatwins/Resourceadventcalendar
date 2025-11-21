@@ -1,4 +1,5 @@
 import { motion } from 'motion/react';
+import { Lock } from 'lucide-react';
 import { CalendarDay } from '../data/calendarData';
 import { DoorCardWrapper } from './DoorCardWrapper';
 import { ImageWithFallback } from './figma/ImageWithFallback';
@@ -86,11 +87,10 @@ export function DoorCard({ day, isUnlocked, isCompleted, isToday, onClick }: Doo
   return (
     <motion.button
       onClick={isUnlocked ? onClick : undefined}
-      disabled={!isUnlocked}
       className={`
         relative overflow-hidden rounded-xl
         transition-all duration-300
-        ${isUnlocked ? 'cursor-pointer hover:shadow-2xl' : 'cursor-not-allowed opacity-50'}
+        ${isUnlocked ? 'cursor-pointer hover:shadow-2xl' : 'cursor-not-allowed opacity-50 pointer-events-none'}
       `}
       style={{
         width: `${day.size.width}px`,
@@ -135,10 +135,15 @@ export function DoorCard({ day, isUnlocked, isCompleted, isToday, onClick }: Doo
 
       {/* Locked overlay */}
       {!isUnlocked && (
-        <div className="absolute inset-0 flex items-center justify-center backdrop-blur-sm z-20" style={{ backgroundColor: 'rgba(232, 228, 225, 0.85)' }}>
-          <svg className="w-12 h-12 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: '#052311' }}>
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-          </svg>
+        <div className="absolute inset-0 flex items-center justify-center backdrop-blur-sm z-20" style={{ backgroundColor: 'rgba(232, 228, 225, 0.4)' }}>
+          <Lock 
+            className="w-40 h-40" 
+            style={{ 
+              color: '#f3f4f6',
+              filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1)) drop-shadow(0 0 30px rgba(255, 255, 255, 0.8))',
+              strokeWidth: 2
+            }} 
+          />
         </div>
       )}
     </motion.button>

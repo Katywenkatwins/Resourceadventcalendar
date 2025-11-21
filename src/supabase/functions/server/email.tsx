@@ -127,12 +127,18 @@ function getWelcomeEmailTemplate(name: string, email: string) {
               <p><strong>Наступні кроки:</strong></p>
               <ol>
                 <li>Оберіть тариф, який вам підходить</li>
-                <li>Завершіть оплату через бе��печну систему WayForPay</li>
+                <li>Завершіть оплату через безпечну систему WayForPay</li>
                 <li>Отримайте доступ до 24 днів трансформації</li>
               </ol>
             </div>
             
             <p>Щодня на вас чекає нова практика від експертів, міні-досвіди та інструменти для внутрішнього відновлення.</p>
+            
+            <p style="text-align: center; margin: 30px 0;">
+              <a href="${Deno.env.get('APP_URL') || 'https://adventresurs.space'}/#payment" class="button" style="background-color: #CE2E2E; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                Обрати тариф і оплатити
+              </a>
+            </p>
             
             <p style="text-align: center;">
               <a href="${Deno.env.get('APP_URL') || 'https://adventresurs.space'}" class="button">
@@ -235,6 +241,16 @@ function getPaymentSuccessEmailTemplate(name: string, tierName: string, amount: 
             margin: 20px 0;
             font-weight: bold;
           }
+          .telegram-button {
+            display: inline-block;
+            padding: 14px 32px;
+            background-color: #0088cc;
+            color: white;
+            text-decoration: none;
+            border-radius: 12px;
+            margin: 10px 0;
+            font-weight: bold;
+          }
           .footer {
             background-color: #f5f5f5;
             padding: 20px;
@@ -254,6 +270,22 @@ function getPaymentSuccessEmailTemplate(name: string, tierName: string, amount: 
           }
           .features li {
             margin: 8px 0;
+          }
+          .telegram-box {
+            background: linear-gradient(135deg, #0088cc 0%, #006699 100%);
+            color: white;
+            padding: 24px;
+            border-radius: 16px;
+            text-align: center;
+            margin: 24px 0;
+          }
+          .telegram-box h3 {
+            margin: 0 0 12px 0;
+            font-size: 20px;
+          }
+          .telegram-box p {
+            margin: 8px 0;
+            opacity: 0.95;
           }
         </style>
       </head>
@@ -304,6 +336,16 @@ function getPaymentSuccessEmailTemplate(name: string, tierName: string, amount: 
               </a>
             </p>
             
+            <div class="telegram-box">
+              <h3>📱 Приєднуйтесь до нашої спільноти!</h3>
+              <p>Діліться своїми досягненнями, отримуйте підтримку та натхнення від інших учасників у нашому Telegram-каналі</p>
+              <p style="margin-top: 16px;">
+                <a href="https://t.me/+MN8nYh5DYx0xZTYy" class="telegram-button" style="color: white;">
+                  Приєднатися до Telegram 💬
+                </a>
+              </p>
+            </div>
+            
             <p><strong>Дякуємо, що обрали нас!</strong></p>
             <p>Бажаємо вам натхненної та трансформуючої подорожі! 🌟</p>
             
@@ -322,7 +364,7 @@ function getPaymentSuccessEmailTemplate(name: string, tierName: string, amount: 
 }
 
 // Ендпоінт для відправки welcome email
-app.post('/send-welcome', async (c) => {
+app.post('/email/send-welcome', async (c) => {
   try {
     const { email, name } = await c.req.json();
     
@@ -348,7 +390,7 @@ app.post('/send-welcome', async (c) => {
 });
 
 // Ендпоінт для відправки payment success email
-app.post('/send-payment-success', async (c) => {
+app.post('/email/send-payment-success', async (c) => {
   try {
     const { email, name, tierName, amount } = await c.req.json();
     

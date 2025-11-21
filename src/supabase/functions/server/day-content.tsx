@@ -60,13 +60,20 @@ app.get('/all', async (c) => {
     
     // Отримуємо контент для кожного дня (1-24)
     for (let day = 1; day <= 24; day++) {
-      const key = `day-content-${day}`;
-      const content = await kv.get(key);
+      const contentKey = `day-content-${day}`;
+      const expertKey = `day-expert-${day}`;
+      const themeKey = `day-theme-${day}`;
       
-      if (content) {
+      const content = await kv.get(contentKey);
+      const expert = await kv.get(expertKey);
+      const theme = await kv.get(themeKey);
+      
+      if (content || expert || theme) {
         parsedContent.push({
           day,
-          content: typeof content === 'string' ? JSON.parse(content) : content,
+          content: content ? (typeof content === 'string' ? JSON.parse(content) : content) : null,
+          expert: expert ? (typeof expert === 'string' ? JSON.parse(expert) : expert) : null,
+          theme: theme ? (typeof theme === 'string' ? JSON.parse(theme) : theme) : null,
         });
       }
     }

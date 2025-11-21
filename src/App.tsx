@@ -1,13 +1,17 @@
-import { useState, useEffect, createContext, useContext } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams } from 'react-router';
 import { LandingPage } from './components/LandingPage';
 import { AuthPage } from './components/AuthPage';
 import { PricingPage } from './components/PricingPage';
-import { PaymentSuccess } from './components/PaymentSuccess';
-import { DayContent } from './components/DayContent';
 import { CalendarView } from './components/CalendarView';
+import { MobileCalendarView } from './components/MobileCalendarView';
+import { DayContent } from './components/DayContent';
 import { AdminPanel } from './components/AdminPanel';
+import { ContactsPage } from './components/ContactsPage';
+import { OfferPage } from './components/OfferPage';
+import { PrivacyPolicy } from './components/PrivacyPolicy';
 import { KVFormatTest } from './components/KVFormatTest';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { createClient } from './utils/supabase/client';
 import { projectId } from './utils/supabase/info';
 
@@ -40,9 +44,13 @@ interface AuthContextType {
   isAdmin: boolean;
   isLoading: boolean;
   completedDays: Set<number>;
+  adminUnlockAll: boolean;
+  unlockedDays: number[]; // список днів, розблокованих адміном
   checkAuth: () => Promise<void>;
   signOut: () => Promise<void>;
   markDayCompleted: (day: number) => Promise<void>;
+  toggleAdminUnlockAll: () => void;
+  loadUnlockedDays: () => Promise<void>; // функція для завантаження розблокованих днів
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -52,15 +60,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [completedDays, setCompletedDays] = useState<Set<number>>(new Set());
+  const [adminUnlockAll, setAdminUnlockAll] = useState(false);
+  const [unlockedDays, setUnlockedDays] = useState<number[]>([]); // масив розблокованих днів
 
   const checkAuth = async () => {
     try {
-      console.log('checkAuth - Starting auth check');
       const accessToken = localStorage.getItem('advent_access_token');
-      console.log('checkAuth - Access token present:', !!accessToken);
 
       if (!accessToken) {
-        console.log('checkAuth - No token, user not authenticated');
         setIsLoading(false);
         setUserProfile(null);
         setIsAdmin(false);
@@ -77,10 +84,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       );
 
-      console.log('checkAuth - Profile response status:', response.status);
-
       if (!response.ok) {
-        console.log('checkAuth - Profile fetch failed, clearing auth');
         localStorage.removeItem('advent_access_token');
         setUserProfile(null);
         setIsAdmin(false);
@@ -90,7 +94,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const profile = await response.json();
-      console.log('checkAuth - Profile data:', profile);
 
       setUserProfile(profile);
       setIsAdmin(profile.email?.toLowerCase() === 'katywenka@gmail.com');
@@ -167,8 +170,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const toggleAdminUnlockAll = () => {
+    setAdminUnlockAll(!adminUnlockAll);
+  };
+
+  const loadUnlockedDays = async () => {
+    try {
+      const accessToken = localStorage.getItem('advent_access_token');
+      
+      // Якщо немає токену - не завантажуємо (користувач не авторизований)
+      if (!accessToken) {
+        console.log('loadUnlockedDays - No access token, skipping');
+        setUnlockedDays([]);
+        return;
+      }
+      
+      console.log('loadUnlockedDays - Access token exists:', !!accessToken);
+      
+      const url = `https://${projectId}.supabase.co/functions/v1/make-server-dc8cbf1f/unlocked-days`;
+      console.log('loadUnlockedDays - Sending request to:', url);
+      
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+      
+      console.log('loadUnlockedDays - Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('loadUnlockedDays - Backend error:', errorText);
+        throw new Error(`Backend returned ${response.status}: ${errorText}`);
+      }
+      
+      const result = await response.json();
+      console.log('loadUnlockedDays - Success! Backend response:', result);
+      
+      setUnlockedDays(result.days);
+      
+    } catch (error) {
+      console.error('loadUnlockedDays - Error:', error);
+      alert('Помилка при завантаженні розблокованих днів. Будь ласка, спробуйте ще раз.');
+    }
+  };
+
   useEffect(() => {
     checkAuth();
+    loadUnlockedDays(); // Завантажуємо розблоковані дні при старті
   }, []);
 
   return (
@@ -177,9 +226,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isAdmin, 
       isLoading, 
       completedDays, 
+      adminUnlockAll,
+      unlockedDays,
       checkAuth, 
       signOut, 
-      markDayCompleted 
+      markDayCompleted,
+      toggleAdminUnlockAll,
+      loadUnlockedDays
     }}>
       {children}
     </AuthContext.Provider>
@@ -292,7 +345,7 @@ function PricingRoute() {
 // Calendar Route
 function CalendarRoute() {
   const navigate = useNavigate();
-  const { userProfile, isAdmin, completedDays, signOut, isLoading } = useAuth();
+  const { userProfile, isAdmin, completedDays, adminUnlockAll, signOut, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -311,6 +364,8 @@ function CalendarRoute() {
   }
 
   const handleDayClick = (day: number) => {
+    console.log('🎯 App.tsx handleDayClick викликано для дня:', day);
+    console.log('📍 Навігуємо на:', `/day/${day}`);
     navigate(`/day/${day}`);
   };
 
@@ -330,14 +385,18 @@ function CalendarRoute() {
   };
 
   return (
-    <CalendarView
-      completedDays={completedDays}
-      onDayClick={handleDayClick}
-      onBackToHome={handleBackToHome}
-      userProfile={userProfile}
-      onSignOut={handleSignOut}
-      onAdminClick={isAdmin ? handleAdminClick : undefined}
-    />
+    <ErrorBoundary>
+      <CalendarView
+        completedDays={completedDays}
+        onDayClick={handleDayClick}
+        onBackToHome={handleBackToHome}
+        userProfile={userProfile}
+        onSignOut={handleSignOut}
+        onAdminClick={isAdmin ? handleAdminClick : undefined}
+        isAdmin={isAdmin}
+        adminUnlockAll={adminUnlockAll}
+      />
+    </ErrorBoundary>
   );
 }
 
@@ -430,7 +489,6 @@ function AppContent() {
         <Route path="/" element={<LandingRoute />} />
         <Route path="/auth" element={<AuthRoute />} />
         <Route path="/pricing" element={<PricingRoute />} />
-        <Route path="/payment-success" element={<PaymentSuccess />} />
         <Route path="/calendar" element={<CalendarRoute />} />
         <Route path="/day/:day" element={<DayRoute />} />
         <Route path="/admin" element={<AdminRoute />} />
@@ -439,6 +497,9 @@ function AppContent() {
             <KVFormatTest />
           </div>
         } />
+        <Route path="/contacts" element={<ContactsRoute />} />
+        <Route path="/offer" element={<OfferRoute />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicyRoute />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <DebugInfo />
@@ -454,4 +515,37 @@ export default function App() {
       </AuthProvider>
     </BrowserRouter>
   );
+}
+
+// Contacts Route
+function ContactsRoute() {
+  const navigate = useNavigate();
+  
+  const handleBack = () => {
+    navigate('/');
+  };
+
+  return <ContactsPage onBack={handleBack} />;
+}
+
+// Offer Route
+function OfferRoute() {
+  const navigate = useNavigate();
+  
+  const handleBack = () => {
+    navigate('/');
+  };
+
+  return <OfferPage onBack={handleBack} />;
+}
+
+// Privacy Policy Route
+function PrivacyPolicyRoute() {
+  const navigate = useNavigate();
+  
+  const handleBack = () => {
+    navigate('/');
+  };
+
+  return <PrivacyPolicy onBack={handleBack} />;
 }

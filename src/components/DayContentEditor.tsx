@@ -113,17 +113,14 @@ export function DayContentEditor({
 
   const handleSave = () => {
     onSave(day, content);
-    onClose();
   };
 
   const handleSaveExpert = () => {
     onSaveExpert(day, expert);
-    onClose();
   };
 
   const handleSaveTheme = () => {
     onSaveTheme(day, theme);
-    onClose();
   };
 
   return (

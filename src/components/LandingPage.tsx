@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router';
 import { Button } from './ui/button';
 import { Sparkles, Gift, Heart, Target, Shield, Globe, CheckCircle2, Calendar, Star, Wind, LogIn } from 'lucide-react';
 import ChristmasTree from '../imports/Frame48097540';
@@ -214,27 +215,27 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
       )}
 
       {/* Декоративні фонові елементи */}
-      <div className="fixed top-[-20px] left-0 opacity-20 pointer-events-none z-0">
+      <div className="fixed top-[-20px] left-0 opacity-20 pointer-events-none z-0 w-[80px] sm:w-[120px] md:w-[150px]">
         <ChristmasBalls />
       </div>
       
-      <div className="fixed top-20 right-10 opacity-20 pointer-events-none z-0">
+      <div className="fixed top-20 right-10 opacity-20 pointer-events-none z-0 w-[60px] sm:w-[100px] md:w-[120px]">
         <ChristmasTree />
       </div>
       
-      <div className="fixed top-1/2 right-3/5 opacity-25 pointer-events-none z-0 w-[100px]">
+      <div className="fixed top-1/2 right-3/5 opacity-25 pointer-events-none z-0 w-[50px] sm:w-[80px] md:w-[100px]">
         <CandyCane />
       </div>
       
-      <div className="fixed bottom-1/4 left-1/2 opacity-20 pointer-events-none z-0 rotate-45 w-[100px]">
+      <div className="fixed bottom-1/4 left-1/2 opacity-20 pointer-events-none z-0 rotate-45 w-[50px] sm:w-[80px] md:w-[100px]">
         <CandyCane />
       </div>
       
-      <div className="fixed bottom-10 left-10 opacity-60 pointer-events-none z-0 w-[200px]">
+      <div className="fixed bottom-10 left-10 opacity-60 pointer-events-none z-0 w-[100px] sm:w-[150px] md:w-[200px]">
         <GiftsWithDecor />
       </div>
       
-      <div className="fixed bottom-[-120px] right-[-80px] opacity-40 pointer-events-none rotate-15 z-0">
+      <div className="fixed bottom-[-120px] right-[-80px] opacity-40 pointer-events-none rotate-15 z-0 scale-50 sm:scale-75 md:scale-100">
         <SnowflakeIcon />
       </div>
 
@@ -262,7 +263,7 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
                 Щодня відкривай нові дверцята — всередині тебе і на сайті.
               </p>
               <p className="text-sm sm:text-base md:text-lg leading-relaxed" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>
-                Медитації, практики, міні-відео, поради й сюрпризи від 24 експертів —<br className="hidden sm:block" />
+                Медитації, практики, міні-відео, поради й сюрпризи від 24 експертів — <br className="hidden sm:block" />
                 щоб зустріти Новий рік у спокої, ресурсі й натхненні.
               </p>
             </div>
@@ -504,7 +505,7 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
             </p>
 
             <p className="text-lg sm:text-xl text-center pt-4" style={{ color: '#d94a4a', fontFamily: 'Arial, sans-serif' }}>
-              Кожен із них — світло у своїй сфері, і вони поділяться з тобою своїм ресурсом.
+              Кожен із них — світло у своїй сфрі, і вони поділяться з тобою своїм ресурсом.
             </p>
 
             {/* Expert Grid Placeholder */}
@@ -692,7 +693,7 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
               letterSpacing: '-2px'
             }}
           >
-            Готова відкрити першу дверцята?
+            Готова відкрити перші дверцята?
           </h2>
           
           <p className="text-lg sm:text-xl md:text-2xl max-w-3xl mx-auto" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>
@@ -708,7 +709,8 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
               style={{ backgroundColor: '#d94a4a', color: 'white', fontFamily: 'Arial, sans-serif' }}
             >
               <Sparkles className="w-6 h-6 sm:w-8 sm:h-8" />
-              Приєднатись до календаря
+              <span className="sm:hidden">Приєднатись</span>
+              <span className="hidden sm:inline">Приєднатись до календаря</span>
             </Button>
           </div>
 
@@ -747,9 +749,9 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
             Створено з любов'ю 💛
           </p>
           <div className="flex flex-wrap justify-center gap-4 sm:gap-8 text-sm pt-4" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>
-            <button className="hover:underline">Контакти</button>
-            <button className="hover:underline">Політика конфіденційності</button>
-            <button className="hover:underline">Підтримка</button>
+            <Link to="/contacts" className="hover:underline">Контакти</Link>
+            <Link to="/offer" className="hover:underline">Договір оферти</Link>
+            <Link to="/privacy-policy" className="hover:underline">Політика конфіденційності</Link>
           </div>
         </div>
       </footer>

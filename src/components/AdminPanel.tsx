@@ -7,8 +7,9 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
-import { Pencil, Trash2, ArrowLeft, Users, Calendar } from 'lucide-react';
+import { Pencil, Trash2, ArrowLeft, Users, Calendar, Settings } from 'lucide-react';
 import { DayContentEditor } from './DayContentEditor';
+import { CalendarSettings } from './CalendarSettings';
 import { TierContent } from '../types/contentBlocks';
 import { ExpertData, ThemeData } from '../types/dayData';
 import { projectId } from '../utils/supabase/info';
@@ -34,7 +35,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'users' | 'days'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'days' | 'settings'>('users');
   const [editingDay, setEditingDay] = useState<number | null>(null);
   const [dayContents, setDayContents] = useState<Map<number, TierContent>>(new Map());
   const [dayExperts, setDayExperts] = useState<Map<number, ExpertData>>(new Map());
@@ -128,14 +129,33 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
         const contentsMap = new Map<number, TierContent>();
         const expertsMap = new Map<number, ExpertData>();
         const themesMap = new Map<number, ThemeData>();
-        data.content.forEach((item: { day: number; content: TierContent; expert: ExpertData; theme: ThemeData }) => {
-          contentsMap.set(item.day, item.content);
-          expertsMap.set(item.day, item.expert);
-          themesMap.set(item.day, item.theme);
+        
+        data.content.forEach((item: { 
+          day: number; 
+          content: TierContent | null; 
+          expert: ExpertData | null; 
+          theme: ThemeData | null;
+        }) => {
+          if (item.content) {
+            contentsMap.set(item.day, item.content);
+          }
+          if (item.expert) {
+            expertsMap.set(item.day, item.expert);
+          }
+          if (item.theme) {
+            themesMap.set(item.day, item.theme);
+          }
         });
+        
         setDayContents(contentsMap);
         setDayExperts(expertsMap);
         setDayThemes(themesMap);
+        
+        console.log('Loaded maps:', {
+          contents: contentsMap.size,
+          experts: expertsMap.size,
+          themes: themesMap.size,
+        });
       }
     } catch (error) {
       console.error('Error loading day contents:', error);
@@ -460,6 +480,14 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
             <Calendar className="w-4 h-4" />
             Редагування днів
           </Button>
+          <Button
+            variant={activeTab === 'settings' ? 'default' : 'outline'}
+            onClick={() => setActiveTab('settings')}
+            className="flex items-center gap-2"
+          >
+            <Settings className="w-4 h-4" />
+            Налаштування календаря
+          </Button>
         </div>
 
         {/* Users Tab */}
@@ -618,6 +646,65 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* Settings Tab */}
+        {activeTab === 'settings' && (
+          <div className="space-y-6">
+            {/* Міграція даних */}
+            <Card>
+              <CardHeader>
+                <CardTitle>⚠️ Міграція даних користувачів</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-gray-600">
+                  Якщо дані користувачів зберігаються в неправильному форматі (кожен символ як окремий ключ), 
+                  ця кнопка виправить структуру даних.
+                </p>
+                <Button
+                  onClick={async () => {
+                    if (!confirm('Ви впевнені? Це оновить дані ВСІХ користувачів.')) return;
+                    
+                    try {
+                      const accessToken = await getAccessToken();
+                      if (!accessToken) {
+                        alert('Токен відсутній. Будь ласка, увійдіть знову.');
+                        return;
+                      }
+
+                      const response = await fetch(
+                        `https://${projectId}.supabase.co/functions/v1/make-server-dc8cbf1f/migrate-users`,
+                        {
+                          method: 'POST',
+                          headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                          },
+                        }
+                      );
+
+                      if (response.ok) {
+                        const result = await response.json();
+                        alert('✅ Міграція успішна! ' + JSON.stringify(result));
+                        loadUsers(); // Перезавантажуємо список користувачів
+                      } else {
+                        const error = await response.text();
+                        alert('❌ Помилка міграції: ' + error);
+                      }
+                    } catch (error) {
+                      alert('❌ Помилка: ' + error);
+                    }
+                  }}
+                  variant="destructive"
+                  className="w-full"
+                >
+                  🔧 Виправити структуру даних користувачів
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Налаштування календаря */}
+            <CalendarSettings accessToken={localStorage.getItem('advent_access_token') || ''} />
+          </div>
         )}
 
         {/* Day Content Editor Modal */}

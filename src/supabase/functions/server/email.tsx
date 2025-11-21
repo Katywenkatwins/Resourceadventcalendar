@@ -331,7 +331,7 @@ function getPaymentSuccessEmailTemplate(name: string, tierName: string, amount: 
             <p>Почніть свою подорож трансформації прямо зараз!</p>
             
             <p style="text-align: center;">
-              <a href="${Deno.env.get('APP_URL') || 'https://adventresurs.space'}" class="button">
+              <a href="${Deno.env.get('APP_URL') || 'https://adventresurs.space/calendar'}" class="button">
                 Відкрити календар
               </a>
             </p>

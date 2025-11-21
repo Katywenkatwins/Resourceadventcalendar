@@ -1,7 +1,14 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router';
+import { Heart, Calendar, Gift, Users, Sparkles, Star, CheckCircle2, Shield, Globe, Wind, Target, LogIn } from 'lucide-react';
+import { ImageWithFallback } from './figma/ImageWithFallback';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "./ui/accordion";
 import { Button } from './ui/button';
-import { Sparkles, Gift, Heart, Target, Shield, Globe, CheckCircle2, Calendar, Star, Wind, LogIn } from 'lucide-react';
+import { Link } from 'react-router';
+import { useState, useEffect } from 'react';
 import ChristmasTree from '../imports/Frame48097540';
 import ChristmasBalls from '../imports/Frame48097541';
 import CandyCane from '../imports/Vector';
@@ -209,7 +216,7 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
       {!isLoading && !isAuthenticated && (
         <div className="fixed top-4 sm:top-6 left-4 sm:left-6 z-50">
           <div className="text-xl sm:text-2xl" style={{ color: '#2d5a3d', fontFamily: "'Dela Gothic One', sans-serif" }}>
-            Адвент-2025
+            Адвент-ресурсу
           </div>
         </div>
       )}
@@ -555,6 +562,7 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
                     'Базові матеріали від експертів',
                     'Трекер прогресу',
                     'Спільнота учасників',
+                    'Участь у розіграші подарунків від партнерів',
                   ].map((feature, idx) => (
                     <div key={idx} className="flex items-start gap-2">
                       <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 mt-0.5" style={{ color: '#2d5a3d' }} />
@@ -593,11 +601,12 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
                 <div className="space-y-2 sm:space-y-3">
                   {[
                     'Все з тарифу "Світло"',
-                    'Розширені PDF-гайди',
+                    'Розширені PDF-гайди, практики',
                     'Додаткові бонуси від експертів',
                     'Доступ до всіх практик на 3 місяці',
                     'Щотижневі live-ефіри',
                     'Персональні рекомендації',
+                    'Участь у розіграші подарунків від партнерів',
                   ].map((feature, idx) => (
                     <div key={idx} className="flex items-start gap-2">
                       <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 mt-0.5" style={{ color: '#d94a4a' }} />
@@ -605,7 +614,7 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
                     </div>
                   ))}
                 </div>
-              </div>
+              </div> 
 
               <Button
                 onClick={handleMainAction}
@@ -625,18 +634,19 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
                   <div className="flex items-baseline gap-2">
                     <span className="text-4xl sm:text-5xl" style={{ color: '#e6963a', fontFamily: 'Arial, sans-serif' }}>€100</span>
                   </div>
-                  <p className="text-sm mt-2 opacity-70" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>+ консультація, lifetime</p>
+                  <p className="text-sm mt-2 opacity-70" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>+ консультація, бонусні подарунки</p>
                 </div>
 
                 <div className="space-y-2 sm:space-y-3">
                   {[
                     'Все з тарифу "Магія"',
-                    'VIP-доступ до всіх матеріалів',
+                    'VIP-доступ до всіх матеріалів на 6 місяців',
                     'Індивідуальна консультація з одним з експертів',
                     'Додаткові 3 ефіри з амбасадорами проєкту',
                     'Закрита VIP спільнота',
                     'Бонусні подарунки',
                     'Пріоритетна підтримка',
+                    'Участь у розіграші подарунків від партнерів',
                   ].map((feature, idx) => (
                     <div key={idx} className="flex items-start gap-2">
                       <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 mt-0.5" style={{ color: '#e6963a' }} />
@@ -660,6 +670,139 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
             Кожен тариф відкриває свій рівень глибини.<br />
             Обери той, який відповідає твоєму стану зараз 💛
           </p>
+        </div>
+
+        {/* Bonus Selection for "Диво" Tier */}
+        <div className="max-w-5xl mx-auto px-4">
+          <div className="bg-gradient-to-br from-[#e6963a]/10 to-[#d94a4a]/10 rounded-3xl p-6 sm:p-8 shadow-2xl border-2 relative z-10" style={{ borderColor: '#e6963a' }}>
+            <div className="text-center space-y-3 mb-6">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full" style={{ backgroundColor: '#e6963a', color: 'white' }}>
+                <Star className="w-5 h-5" />
+                <span className="text-sm" style={{ fontFamily: 'Arial, sans-serif' }}>Для тарифу "Диво"</span>
+              </div>
+              <h3 className="text-2xl sm:text-3xl md:text-4xl" style={{ color: '#e6963a', fontFamily: "'Dela Gothic One', sans-serif", letterSpacing: '-1px' }}>
+                Обери свій бонус від експерта
+              </h3>
+              <p className="text-sm sm:text-base max-w-2xl mx-auto px-2" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>
+                При виборі тарифу "Диво" ви обираєте один бонус зі списку нижче. <br />
+                Наші менеджери зв'яжуться з вами, зафіксують ваш вибір і організують бонус разом з експертом.
+              </p>
+            </div>
+
+            <Accordion type="single" collapsible className="space-y-3">
+              {[
+                {
+                  name: 'Олена Коваленко',
+                  role: 'Психолог, арт-терапевт',
+                  instagram: '@olena.kovalenko.therapy',
+                  bonus: 'Індивідуальна консультація з арт-терапії (90 хвилин)',
+                  description: 'Допоможу розкрити внутрішні ресурси через творчість. Разом створимо вашу особисту карту цілей і трансформацій на 2025 рік.',
+                  color: '#e6963a'
+                },
+                {
+                  name: 'Марія Петренко',
+                  role: 'Yoga & Meditation teacher',
+                  instagram: '@maria.yoga.flow',
+                  bonus: 'Персональна практика йоги + медитація (60 хвилин)',
+                  description: 'Створю для вас унікальну послідовність асан та медитацію, що відповідає саме вашим потребам та рівню підготовки.',
+                  color: '#2d5a3d'
+                },
+                {
+                  name: 'Анна Сидоренко',
+                  role: 'Нутриціолог, wellness-коуч',
+                  instagram: '@anna.wellness.coach',
+                  bonus: 'Персональний план харчування + консультація (90 хвилин)',
+                  description: 'Розроблю індивідуальний план харчування з урахуванням ваших цілей та особливостей організму. Навчу будувати здорові харчові звички.',
+                  color: '#d94a4a'
+                },
+                {
+                  name: 'Ірина Мельник',
+                  role: 'Бізнес-коуч, ментор',
+                  instagram: '@irina.business.mentor',
+                  bonus: 'Стратегічна сесія для професійного розвитку (120 хвилин)',
+                  description: 'Допоможу визначити вашу унікальну цінність, побудувати план кар\'єрного зростання та розкрити ваш потенціал на повну.',
+                  color: '#1e3a5f'
+                },
+                {
+                  name: 'Софія Ткаченко',
+                  role: 'Арт-терапевт, творчий коуч',
+                  instagram: '@sofia.art.therapy',
+                  bonus: 'Майстер-клас з інтуїтивного малювання (90 хвилин)',
+                  description: 'Проведу вас через терапевтичну практику малювання, де ви зможете виразити та трансформувати свої емоції через мистецтво.',
+                  color: '#e6963a'
+                },
+              ].map((expert, idx) => (
+                <AccordionItem 
+                  key={idx} 
+                  value={`expert-${idx}`}
+                  className="bg-white/90 rounded-2xl border-2 overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300"
+                  style={{ borderColor: 'rgba(230,150,58,0.3)' }}
+                >
+                  <AccordionTrigger className="px-4 sm:px-5 py-3 sm:py-4 hover:no-underline">
+                    <div className="flex items-center gap-3 w-full text-left">
+                      <div
+                        className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-2 flex-shrink-0 flex items-center justify-center"
+                        style={{ 
+                          borderColor: expert.color,
+                          backgroundColor: `${expert.color}15`
+                        }}
+                      >
+                        <div 
+                          className="w-10 h-10 sm:w-12 sm:h-12 rounded-full"
+                          style={{ backgroundColor: expert.color }}
+                        />
+                      </div>
+                      <div className="flex-grow min-w-0">
+                        <h4 className="text-base sm:text-lg mb-0.5 truncate" style={{ color: '#2d5a3d', fontFamily: 'Arial, sans-serif', fontWeight: 'bold' }}>
+                          {expert.name}
+                        </h4>
+                        <p className="text-xs sm:text-sm mb-0.5 truncate" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>
+                          {expert.role}
+                        </p>
+                        <a 
+                          href={`https://instagram.com/${expert.instagram.replace('@', '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs sm:text-sm hover:underline inline-flex items-center gap-1"
+                          style={{ color: '#e6963a' }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Users className="w-3 h-3" />
+                          {expert.instagram}
+                        </a>
+                      </div>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-4 sm:px-5 pb-4 sm:pb-5 pt-1">
+                    <div className="space-y-3">
+                      <div className="p-3 rounded-xl" style={{ backgroundColor: 'rgba(230,150,58,0.1)' }}>
+                        <div className="flex items-start gap-2 mb-1">
+                          <Gift className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#e6963a' }} />
+                          <div>
+                            <p className="text-xs opacity-70 mb-1" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>
+                              Бонус:
+                            </p>
+                            <p className="text-sm sm:text-base" style={{ color: '#2d5a3d', fontFamily: 'Arial, sans-serif', fontWeight: 'bold' }}>
+                              {expert.bonus}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-xs sm:text-sm leading-relaxed" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>
+                        {expert.description}
+                      </p>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+
+            <div className="mt-8 p-6 rounded-2xl text-center" style={{ backgroundColor: 'rgba(255,255,255,0.7)' }}>
+              <p className="text-sm sm:text-base" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>
+                💫 Після оплати тарифу "Диво" наші менеджери зв'яжуться з вами протягом 24 годин для узгодження деталей вашого обраного бонуса
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Testimonial Section */}
@@ -743,10 +886,10 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
       <footer className="border-t-2 py-8 sm:py-12 mt-16 sm:mt-24" style={{ borderColor: 'rgba(45,90,61,0.13)', backgroundColor: '#faf8f5' }}>
         <div className="max-w-6xl mx-auto px-4 text-center space-y-3 sm:space-y-4">
           <p className="text-base sm:text-lg" style={{ color: '#2d5a3d', fontFamily: 'Arial, sans-serif' }}>
-            © 2025 "Адвент календар ресурсного наповнення"
+            © 2025 "Адвент-марафон ресурсу"
           </p>
           <p className="text-base sm:text-lg" style={{ color: '#d94a4a', fontFamily: 'Arial, sans-serif' }}>
-            Створено з любов'ю 💛
+            Створено з любов'ю 
           </p>
           <div className="flex flex-wrap justify-center gap-4 sm:gap-8 text-sm pt-4" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>
             <Link to="/contacts" className="hover:underline">Контакти</Link>

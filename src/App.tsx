@@ -65,9 +65,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const checkAuth = async () => {
     try {
+      console.log('🔍 checkAuth: Starting...');
       const accessToken = localStorage.getItem('advent_access_token');
 
       if (!accessToken) {
+        console.log('🔍 checkAuth: No access token found');
         setIsLoading(false);
         setUserProfile(null);
         setIsAdmin(false);
@@ -75,6 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      console.log('🔍 checkAuth: Fetching profile from server...');
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-dc8cbf1f/profile`,
         {
@@ -85,6 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       );
 
       if (!response.ok) {
+        console.error('🔍 checkAuth: Profile fetch failed with status:', response.status);
         localStorage.removeItem('advent_access_token');
         setUserProfile(null);
         setIsAdmin(false);
@@ -94,13 +98,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const profile = await response.json();
+      console.log('🔍 checkAuth: Profile received:', {
+        email: profile.email,
+        name: profile.name,
+        tier: profile.tier,
+        payment_status: profile.payment_status
+      });
 
       setUserProfile(profile);
       setIsAdmin(profile.email?.toLowerCase() === 'katywenka@gmail.com');
       setCompletedDays(new Set(profile.progress || []));
       setIsLoading(false);
+      
+      console.log('✅ checkAuth: Profile updated successfully');
     } catch (error) {
-      console.error('Auth check error:', error);
+      console.error('❌ checkAuth: Error:', error);
       localStorage.removeItem('advent_access_token');
       setUserProfile(null);
       setIsAdmin(false);
@@ -311,7 +323,9 @@ function PricingRoute() {
   const { userProfile, checkAuth, signOut } = useAuth();
 
   const handlePaymentSuccess = async () => {
+    console.log('🎯 handlePaymentSuccess: Starting...');
     await checkAuth();
+    console.log('🎯 handlePaymentSuccess: checkAuth completed, navigating to calendar');
     navigate('/calendar');
   };
 
@@ -324,12 +338,16 @@ function PricingRoute() {
     navigate('/');
   };
 
+  // Автоматично перенаправляємо якщо payment_status змінився на 'paid'
+  useEffect(() => {
+    if (userProfile?.payment_status === 'paid') {
+      console.log('🎯 PricingRoute: Payment status is paid, redirecting to calendar...');
+      navigate('/calendar', { replace: true });
+    }
+  }, [userProfile?.payment_status, navigate]);
+
   if (!userProfile) {
     return <Navigate to="/auth" replace />;
-  }
-
-  if (userProfile.payment_status === 'paid') {
-    return <Navigate to="/calendar" replace />;
   }
 
   return (

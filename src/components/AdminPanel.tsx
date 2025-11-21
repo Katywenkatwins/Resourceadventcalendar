@@ -7,7 +7,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
-import { Pencil, Trash2, ArrowLeft, Users, Calendar, Settings } from 'lucide-react';
+import { Pencil, Trash2, ArrowLeft, Users, Calendar, Settings, CreditCard } from 'lucide-react';
 import { DayContentEditor } from './DayContentEditor';
 import { CalendarSettings } from './CalendarSettings';
 import { TierContent } from '../types/contentBlocks';
@@ -26,16 +26,32 @@ interface User {
   payment_date?: string;
 }
 
+interface Payment {
+  userId: string;
+  userName: string;
+  userEmail: string;
+  email: string;
+  tier: 'basic' | 'deep' | 'premium';
+  amount: number;
+  status: 'pending' | 'completed' | 'failed';
+  createdAt: string;
+  completedAt?: string;
+  orderReference: string;
+  transactionId?: string;
+  transactionStatus?: string;
+}
+
 interface AdminPanelProps {
   onBack: () => void;
 }
 
 export function AdminPanel({ onBack }: AdminPanelProps) {
   const [users, setUsers] = useState<User[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'users' | 'days' | 'settings'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'payments' | 'days' | 'settings'>('users');
   const [editingDay, setEditingDay] = useState<number | null>(null);
   const [dayContents, setDayContents] = useState<Map<number, TierContent>>(new Map());
   const [dayExperts, setDayExperts] = useState<Map<number, ExpertData>>(new Map());
@@ -55,6 +71,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
   useEffect(() => {
     loadUsers();
     loadDayContents();
+    loadPayments();
   }, []);
 
   const loadUsers = async () => {
@@ -159,6 +176,35 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
       }
     } catch (error) {
       console.error('Error loading day contents:', error);
+    }
+  };
+
+  const loadPayments = async () => {
+    try {
+      const accessToken = await getAccessToken();
+      
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-dc8cbf1f/admin/payments`,
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        console.error('Failed to load payments');
+        return;
+      }
+
+      const data = await response.json();
+      console.log('Loaded payments:', data);
+      
+      if (data.payments && Array.isArray(data.payments)) {
+        setPayments(data.payments);
+      }
+    } catch (error) {
+      console.error('Error loading payments:', error);
     }
   };
 
@@ -473,6 +519,14 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
             Користувачі
           </Button>
           <Button
+            variant={activeTab === 'payments' ? 'default' : 'outline'}
+            onClick={() => setActiveTab('payments')}
+            className="flex items-center gap-2"
+          >
+            <CreditCard className="w-4 h-4" />
+            Платежі
+          </Button>
+          <Button
             variant={activeTab === 'days' ? 'default' : 'outline'}
             onClick={() => setActiveTab('days')}
             className="flex items-center gap-2"
@@ -624,6 +678,71 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
           </Card>
         )}
 
+        {/* Payments Tab */}
+        {activeTab === 'payments' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Платежі ({payments.length})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Ім'я</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Тариф</TableHead>
+                      <TableHead>Сума</TableHead>
+                      <TableHead>Статус</TableHead>
+                      <TableHead>Дата створення</TableHead>
+                      <TableHead>Дата завершення</TableHead>
+                      <TableHead>Референс</TableHead>
+                      <TableHead>Транзакція</TableHead>
+                      <TableHead>Статус транзакції</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {payments.map((payment) => (
+                      <TableRow key={payment.orderReference}>
+                        <TableCell>{payment.userName}</TableCell>
+                        <TableCell>{payment.userEmail}</TableCell>
+                        <TableCell>
+                          <Badge className={getTierBadgeColor(payment.tier)}>
+                            {getTierName(payment.tier)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {payment.amount} UAH
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={payment.status === 'completed' ? 'default' : 'secondary'}>
+                            {payment.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {payment.createdAt ? new Date(payment.createdAt).toLocaleDateString('uk-UA') : '-'}
+                        </TableCell>
+                        <TableCell>
+                          {payment.completedAt ? new Date(payment.completedAt).toLocaleDateString('uk-UA') : '-'}
+                        </TableCell>
+                        <TableCell>
+                          {payment.orderReference}
+                        </TableCell>
+                        <TableCell>
+                          {payment.transactionId}
+                        </TableCell>
+                        <TableCell>
+                          {payment.transactionStatus}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Days Tab */}
         {activeTab === 'days' && (
           <Card>
@@ -651,6 +770,113 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
         {/* Settings Tab */}
         {activeTab === 'settings' && (
           <div className="space-y-6">
+            {/* Тестування WayForPay */}
+            <Card>
+              <CardHeader>
+                <CardTitle>💳 Тестування WayForPay</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-gray-600">
+                  Перевірка налаштувань оплати та інтеграції з WayForPay
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Button
+                    onClick={async () => {
+                      try {
+                        const accessToken = await getAccessToken();
+                        const response = await fetch(
+                          `https://${projectId}.supabase.co/functions/v1/make-server-dc8cbf1f/payment/create`,
+                          {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              'Authorization': `Bearer ${accessToken}`,
+                            },
+                            body: JSON.stringify({ 
+                              tier: 'basic',
+                              clientEmail: 'katywenka@gmail.com'
+                            })
+                          }
+                        );
+
+                        if (response.ok) {
+                          const data = await response.json();
+                          console.log('Payment data:', data);
+                          alert('✅ Платіж створено успішно!\n\n' + JSON.stringify(data, null, 2));
+                        } else {
+                          const error = await response.text();
+                          alert('❌ Помилка: ' + error);
+                        }
+                      } catch (error) {
+                        alert('❌ Помилка: ' + error);
+                      }
+                    }}
+                    variant="outline"
+                  >
+                    🧪 Тест створення платежу
+                  </Button>
+
+                  <Button
+                    onClick={async () => {
+                      try {
+                        const accessToken = await getAccessToken();
+                        const response = await fetch(
+                          `https://${projectId}.supabase.co/functions/v1/make-server-dc8cbf1f/payment/demo-success`,
+                          {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              'Authorization': `Bearer ${accessToken}`,
+                            },
+                            body: JSON.stringify({ tier: 'premium' })
+                          }
+                        );
+
+                        if (response.ok) {
+                          alert('✅ DEMO оплата успішна! Перезавантажте сторінку.');
+                          loadUsers();
+                        } else {
+                          const error = await response.text();
+                          alert('❌ Помилка: ' + error);
+                        }
+                      } catch (error) {
+                        alert('❌ Помилка: ' + error);
+                      }
+                    }}
+                    variant="outline"
+                  >
+                    🎭 DEMO: Успішна оплата
+                  </Button>
+
+                  <Button
+                    onClick={() => {
+                      const logs = `
+🔧 WayForPay Credentials:
+- Merchant: adventresurs_space  
+- Secret: ${'{stored in WAYFORPAY_MERCHANT_PASSWORD}'}
+- Currency: UAH
+
+📋 Endpoints:
+- Create: /payment/create
+- Callback: /payment/callback
+- Status: /payment/status/:ref
+- Demo: /payment/demo-success
+
+🔗 Callback URL:
+https://{supabase-url}/functions/v1/make-server-dc8cbf1f/payment/callback
+                      `.trim();
+                      
+                      alert(logs);
+                      console.log(logs);
+                    }}
+                    variant="outline"
+                  >
+                    📋 Показати налаштування
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Міграція даних */}
             <Card>
               <CardHeader>

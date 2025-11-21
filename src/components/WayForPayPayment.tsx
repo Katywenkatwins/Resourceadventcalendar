@@ -11,9 +11,9 @@ interface WayForPayPaymentProps {
 }
 
 const tierInfo = {
-  basic: { name: 'Світло', amount: 10, color: '#2d5a3d' },
-  deep: { name: 'Магія', amount: 35, color: '#d94a4a' },
-  premium: { name: 'Диво', amount: 100, color: '#e6963a' }
+  basic: { name: 'Світло', amount: 10, currency: '€', color: '#2d5a3d' },
+  deep: { name: 'Магія', amount: 35, currency: '€', color: '#d94a4a' },
+  premium: { name: 'Диво', amount: 100, currency: '€', color: '#e6963a' }
 };
 
 export function WayForPayPayment({ tier, userEmail, onSuccess, onCancel }: WayForPayPaymentProps) {
@@ -66,6 +66,8 @@ export function WayForPayPayment({ tier, userEmail, onSuccess, onCancel }: WayFo
         throw new Error('Не авторизовано');
       }
 
+      console.log('💳 Initiating payment for tier:', tier);
+
       // Get payment data from server
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-dc8cbf1f/payment/create`,
@@ -76,21 +78,28 @@ export function WayForPayPayment({ tier, userEmail, onSuccess, onCancel }: WayFo
             'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({ 
-            tier,
-            clientEmail: userEmail // Додаємо email користувача
+            tier
+            // clientEmail видалено - сервер завжди використовує user.email з реєстрації
           })
         }
       );
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('❌ Payment creation failed:', errorData);
         throw new Error(errorData.error || 'Помилка створення платежу');
       }
 
       const paymentData = await response.json();
+      console.log('✅ Payment data received:', { 
+        orderReference: paymentData.orderReference,
+        amount: paymentData.amount,
+        currency: paymentData.currency
+      });
 
       // Check if WayForPay widget is loaded
       if (typeof (window as any).Wayforpay === 'undefined') {
+        console.log('📦 Loading WayForPay widget script...');
         // Load WayForPay script dynamically
         const script = document.createElement('script');
         script.src = 'https://secure.wayforpay.com/server/pay-widget.js';
@@ -100,9 +109,11 @@ export function WayForPayPayment({ tier, userEmail, onSuccess, onCancel }: WayFo
         await new Promise((resolve) => {
           script.onload = resolve;
         });
+        console.log('✅ WayForPay widget loaded');
       }
 
       // Create payment widget
+      console.log('🚀 Launching WayForPay widget...');
       const wayforpay = new (window as any).Wayforpay();
       
       wayforpay.run({
@@ -111,35 +122,94 @@ export function WayForPayPayment({ tier, userEmail, onSuccess, onCancel }: WayFo
       },
       async function onApproved() {
         // Payment approved
-        console.log('Payment approved by WayForPay widget');
+        console.log('✅ Payment approved by WayForPay widget');
+        setPaymentStatus('processing');
         
-        // Wait a bit for server to process callback
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        // Wait for server to process callback - збільшуємо час очікування
+        console.log('⏳ Waiting for server to process payment...');
+        await new Promise(resolve => setTimeout(resolve, 5000)); // Збільшено до 5 секунд
         
-        // Check payment status on server
-        const statusCheck = await checkPaymentStatus(paymentData.orderReference);
+        // Poll payment status multiple times
+        let verified = false;
+        for (let attempt = 1; attempt <= 5; attempt++) {
+          console.log(`🔍 Attempt ${attempt}/5 to verify payment...`);
+          const statusCheck = await checkPaymentStatus(paymentData.orderReference);
+          
+          if (statusCheck) {
+            console.log('✅ Payment verified on server');
+            verified = true;
+            setPaymentStatus('success');
+            setLoading(false);
+            break;
+          }
+          
+          // Wait before next attempt
+          if (attempt < 5) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
+        }
         
-        if (statusCheck) {
-          console.log('Payment verified on server');
+        if (!verified) {
+          console.warn('⚠️ Payment approved but not verified on server yet');
+          console.log('💡 This might be because WayForPay callback has not arrived yet');
+          console.log('💡 Please contact support if tier is not activated after 5 minutes');
+          
+          // Показуємо success, бо WayForPay підтвердив оплату
+          // Callback може прийти пізніше і оновить статус
           setPaymentStatus('success');
           setLoading(false);
+        }
+        
+        // Примусово оновлюємо статус користувача після успішної оплати
+        console.log('🔄 Force updating user status after payment approval...');
+        try {
+          const token = localStorage.getItem('advent_access_token');
+          const updateResponse = await fetch(
+            `https://${projectId}.supabase.co/functions/v1/make-server-dc8cbf1f/payment/force-update`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({ 
+                orderReference: paymentData.orderReference
+              })
+            }
+          );
           
-          // Call success callback after a short delay to show success message
-          if (onSuccess) {
-            setTimeout(() => onSuccess(), 2000);
+          if (updateResponse.ok) {
+            const updateData = await updateResponse.json();
+            console.log('✅ User status force-updated successfully:', updateData);
+            
+            // Чекаємо додатково, щоб дані точно синхронізувались
+            console.log('⏳ Waiting additional 2 seconds for data sync...');
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          } else {
+            console.warn('⚠️ Failed to force-update user status, callback will handle it');
           }
+        } catch (err) {
+          console.warn('⚠️ Error force-updating user status:', err);
+        }
+        
+        // Call success callback
+        if (onSuccess) {
+          setTimeout(() => {
+            console.log('Executing onSuccess callback now');
+            onSuccess();
+          }, 2000);
         }
       },
       function onDeclined() {
         // Payment declined
-        console.log('Payment declined by WayForPay widget');
+        console.log('❌ Payment declined by WayForPay widget');
         setPaymentStatus('failed');
         setError('Оплату відхилено');
         setLoading(false);
       },
       function onPending() {
         // Payment pending
-        console.log('Payment pending');
+        console.log('⏳ Payment pending');
         setPaymentStatus('processing');
         
         // Poll payment status
@@ -213,6 +283,9 @@ export function WayForPayPayment({ tier, userEmail, onSuccess, onCancel }: WayFo
         <p style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>
           Ваш тариф "{currentTier.name}" активовано
         </p>
+        <p className="text-sm" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif', opacity: 0.7 }}>
+          Якщо тариф не активувався автоматично, будь ласка, оновіть сторінку через 1-2 хвилини або зверніться в підтримку
+        </p>
       </div>
     );
   }
@@ -264,7 +337,10 @@ export function WayForPayPayment({ tier, userEmail, onSuccess, onCancel }: WayFo
           Тариф: <span style={{ color: currentTier.color }}>{currentTier.name}</span>
         </p>
         <p className="text-3xl mt-2" style={{ color: currentTier.color, fontFamily: 'Arial, sans-serif' }}>
-          €{currentTier.amount}
+          {currentTier.currency}{currentTier.amount}
+        </p>
+        <p className="text-sm mt-1" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif', opacity: 0.7 }}>
+          Оплата в гривні за курсом WayForPay
         </p>
       </div>
 
@@ -315,7 +391,7 @@ export function WayForPayPayment({ tier, userEmail, onSuccess, onCancel }: WayFo
           ) : (
             <>
               <CreditCard className="w-5 h-5 mr-2" />
-              Оплатити {currentTier.amount} EUR
+              Оплатити {currentTier.amount} {currentTier.currency}
             </>
           )}
         </Button>

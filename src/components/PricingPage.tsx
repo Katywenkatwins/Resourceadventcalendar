@@ -18,17 +18,19 @@ export function PricingPage({ onPaymentSuccess, userName, onBackToHome, onSignOu
     console.log('PricingPage: handlePaymentSuccess called');
     
     // Wait a bit for data to be fully updated
-    console.log('PricingPage: waiting 1 second for data sync...');
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    console.log('PricingPage: waiting 2 seconds for data sync...');
+    await new Promise(resolve => setTimeout(resolve, 2000));
     
     // Refresh user profile to get updated tier
     console.log('PricingPage: calling checkAuth...');
     await checkAuth();
-    console.log('PricingPage: checkAuth completed, userProfile:', userProfile);
+    console.log('PricingPage: checkAuth completed');
     
-    // Call parent success handler
-    console.log('PricingPage: calling onPaymentSuccess with tier:', userProfile?.tier);
-    onPaymentSuccess(userProfile?.tier || 'basic');
+    // useEffect in PricingRoute буде автоматично перенаправляти коли payment_status === 'paid'
+    // Але викликаємо onPaymentSuccess на всяк випадок для резервного перенаправлення
+    if (onPaymentSuccess) {
+      onPaymentSuccess(userProfile?.tier || 'deep');
+    }
   };
 
   return (

@@ -530,6 +530,48 @@ app.delete("/make-server-dc8cbf1f/admin/users/:userId", async (c) => {
   }
 });
 
+// Admin: Get all payments/transactions
+app.get("/make-server-dc8cbf1f/admin/payments", async (c) => {
+  try {
+    const user = await verifyUser(c.req.header('Authorization'));
+    const userEmail = (user?.email || '').toLowerCase().trim();
+    const adminEmail = 'katywenka@gmail.com';
+    
+    if (!user || userEmail !== adminEmail) {
+      return c.json({ error: 'Unauthorized - Admin only' }, 403);
+    }
+
+    // Get all payments from KV store
+    const payments = await kv.getByPrefix('payment:');
+    
+    console.log('Admin fetched payments:', payments.length);
+    
+    // Збираємо інформацію про користувачів для кожної транзакції
+    const paymentsWithUserInfo = await Promise.all(
+      payments.map(async (payment: any) => {
+        const supabase = getSupabaseAdmin();
+        const { data: { user: userInfo } } = await supabase.auth.admin.getUserById(payment.userId);
+        
+        return {
+          ...payment,
+          userName: userInfo?.user_metadata?.name || 'Невідомо',
+          userEmail: payment.email || userInfo?.email || 'Невідомо', // Email з транзакції має пріоритет
+        };
+      })
+    );
+    
+    // Сортуємо за датою створення (найновіші першими)
+    paymentsWithUserInfo.sort((a, b) => {
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    });
+    
+    return c.json({ payments: paymentsWithUserInfo });
+  } catch (error) {
+    console.error('Admin payments fetch error:', error);
+    return c.json({ error: `Failed to fetch payments: ${error.message}` }, 500);
+  }
+});
+
 // Admin: Mark user as advent-calendar user
 app.post("/make-server-dc8cbf1f/admin/mark-advent-user/:userId", async (c) => {
   try {

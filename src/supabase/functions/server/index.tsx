@@ -158,6 +158,51 @@ app.post("/make-server-dc8cbf1f/signup", async (c) => {
   }
 });
 
+// Sign in endpoint
+app.post("/make-server-dc8cbf1f/signin", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { email, password } = body;
+
+    if (!email || !password) {
+      return c.json({ error: 'Email and password are required' }, 400);
+    }
+
+    const supabase = getSupabaseClient();
+    
+    // Try to sign in
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      console.log('Sign in error:', error);
+      if (error.message.includes('Invalid login credentials')) {
+        return c.json({ error: 'Неправильний email або пароль' }, 401);
+      }
+      return c.json({ error: error.message }, 400);
+    }
+
+    if (!data.session || !data.user) {
+      return c.json({ error: 'Failed to create session' }, 400);
+    }
+
+    return c.json({ 
+      success: true, 
+      access_token: data.session.access_token,
+      user: {
+        id: data.user.id,
+        email: data.user.email,
+        name: data.user.user_metadata?.name,
+      }
+    });
+  } catch (error) {
+    console.error('Sign in error:', error);
+    return c.json({ error: 'Failed to sign in' }, 500);
+  }
+});
+
 // Confirm payment endpoint (after WayforPay callback)
 app.post("/make-server-dc8cbf1f/confirm-payment", async (c) => {
   try {

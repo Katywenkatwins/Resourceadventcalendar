@@ -3,6 +3,7 @@ import { Lock } from 'lucide-react';
 import { CalendarDay } from '../data/calendarData';
 import { DoorCardWrapper } from './DoorCardWrapper';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import { useState, useEffect } from 'react';
 import img1 from 'figma:asset/f5864068b48e689e8cbb7001ecb1b7588f6561ef.png';
 import img2 from 'figma:asset/cfa8b96bcd7c73a21a8d72a5db1876a97f607252.png';
 import img3 from 'figma:asset/50f04777d9f4544671e50a00c99d5d40299a1da0.png';
@@ -64,6 +65,12 @@ const cardImages: Record<number, string> = {
 };
 
 export function DoorCard({ day, isUnlocked, isCompleted, isToday, onClick }: DoorCardProps) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    setIsMobile(window.innerWidth < 768);
+  }, []);
+
   const renderDesign = () => {
     const imageUrl = cardImages[day.day];
     
@@ -73,6 +80,7 @@ export function DoorCard({ day, isUnlocked, isCompleted, isToday, onClick }: Doo
           src={imageUrl}
           alt={`День ${day.day}`}
           className="size-full object-cover"
+          loading="lazy"
         />
       );
     }
@@ -84,8 +92,19 @@ export function DoorCard({ day, isUnlocked, isCompleted, isToday, onClick }: Doo
     );
   };
 
+  // На мобільному використовуємо простий button без Motion анімацій
+  const ButtonComponent = isMobile ? 'button' : motion.button;
+  const buttonProps = isMobile ? {} : {
+    whileHover: isUnlocked ? { 
+      scale: 1.05,
+      rotateY: 5,
+      transition: { duration: 0.3 }
+    } : {},
+    whileTap: isUnlocked ? { scale: 0.98 } : {}
+  };
+
   return (
-    <motion.button
+    <ButtonComponent
       onClick={isUnlocked ? onClick : undefined}
       className={`
         relative overflow-hidden rounded-xl
@@ -96,12 +115,7 @@ export function DoorCard({ day, isUnlocked, isCompleted, isToday, onClick }: Doo
         width: `${day.size.width}px`,
         height: `${day.size.height}px`,
       }}
-      whileHover={isUnlocked ? { 
-        scale: 1.05,
-        rotateY: 5,
-        transition: { duration: 0.3 }
-      } : {}}
-      whileTap={isUnlocked ? { scale: 0.98 } : {}}
+      {...buttonProps}
     >
       <DoorCardWrapper transform={day.transform} width={day.size.width} height={day.size.height}>
         <div className="absolute inset-0">
@@ -111,26 +125,44 @@ export function DoorCard({ day, isUnlocked, isCompleted, isToday, onClick }: Doo
 
       {/* Completed badge */}
       {isCompleted && (
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          className="absolute top-4 right-4 w-12 h-12 rounded-full flex items-center justify-center z-20"
-          style={{ backgroundColor: '#052311' }}
-        >
-          <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-          </svg>
-        </motion.div>
+        isMobile ? (
+          <div
+            className="absolute top-4 right-4 w-12 h-12 rounded-full flex items-center justify-center z-20"
+            style={{ backgroundColor: '#052311' }}
+          >
+            <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+        ) : (
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className="absolute top-4 right-4 w-12 h-12 rounded-full flex items-center justify-center z-20"
+            style={{ backgroundColor: '#052311' }}
+          >
+            <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+            </svg>
+          </motion.div>
+        )
       )}
 
       {/* Today indicator */}
       {isToday && !isCompleted && (
-        <motion.div
-          animate={{ scale: [1, 1.3, 1] }}
-          transition={{ duration: 2, repeat: Infinity }}
-          className="absolute -top-3 -right-3 w-8 h-8 rounded-full z-20"
-          style={{ backgroundColor: '#ce2e2e' }}
-        />
+        isMobile ? (
+          <div
+            className="absolute -top-3 -right-3 w-8 h-8 rounded-full z-20"
+            style={{ backgroundColor: '#ce2e2e' }}
+          />
+        ) : (
+          <motion.div
+            animate={{ scale: [1, 1.3, 1] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="absolute -top-3 -right-3 w-8 h-8 rounded-full z-20"
+            style={{ backgroundColor: '#ce2e2e' }}
+          />
+        )
       )}
 
       {/* Locked overlay */}
@@ -146,6 +178,6 @@ export function DoorCard({ day, isUnlocked, isCompleted, isToday, onClick }: Doo
           />
         </div>
       )}
-    </motion.button>
+    </ButtonComponent>
   );
 }

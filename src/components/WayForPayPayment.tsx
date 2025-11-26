@@ -396,66 +396,6 @@ export function WayForPayPayment({ tier, userEmail, onSuccess, onCancel }: WayFo
           )}
         </Button>
 
-        {/* DEMO MODE - Remove in production */}
-        <Button
-          onClick={async () => {
-            console.log('DEMO: Button clicked - starting simulation');
-            setLoading(true);
-            setError(null);
-            
-            try {
-              const token = localStorage.getItem('advent_access_token');
-              console.log('DEMO: Token retrieved:', token ? 'exists' : 'missing');
-              
-              console.log('DEMO: Sending request to /payment/demo-success with tier:', tier);
-              const response = await fetch(
-                `https://${projectId}.supabase.co/functions/v1/make-server-dc8cbf1f/payment/demo-success`,
-                {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                  },
-                  body: JSON.stringify({ tier })
-                }
-              );
-              
-              console.log('DEMO: Response status:', response.status);
-              const responseText = await response.text();
-              console.log('DEMO: Response body:', responseText);
-              
-              if (response.ok) {
-                console.log('DEMO: Payment successful - setting success state');
-                setPaymentStatus('success');
-                setLoading(false);
-                
-                console.log('DEMO: Calling onSuccess callback after 2 seconds');
-                if (onSuccess) {
-                  setTimeout(() => {
-                    console.log('DEMO: Executing onSuccess callback now');
-                    onSuccess();
-                  }, 2000);
-                } else {
-                  console.warn('DEMO: onSuccess callback is not defined!');
-                }
-              } else {
-                console.error('DEMO: Payment failed with status:', response.status);
-                throw new Error('Demo payment failed: ' + responseText);
-              }
-            } catch (error) {
-              console.error('DEMO payment error:', error);
-              setError('Помилка тестової оплати: ' + (error instanceof Error ? error.message : String(error)));
-              setPaymentStatus('failed');
-              setLoading(false);
-            }
-          }}
-          disabled={loading}
-          className="w-full py-4 text-sm rounded-xl transition-all duration-300"
-          style={{ backgroundColor: '#e6963a', color: 'white', fontFamily: 'Arial, sans-serif', opacity: 0.7 }}
-        >
-          🧪 DEMO: Симуляція успішної оплати
-        </Button>
-
         {onCancel && (
           <Button
             variant="outline"

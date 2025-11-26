@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronLeft, Download, Check, ExternalLink, Play, Instagram, Send, Lock } from 'lucide-react';
 import { Button } from './ui/button';
@@ -10,6 +10,8 @@ import { TierContent } from '../types/contentBlocks';
 import { ExpertData, ThemeData } from '../types/dayData';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import ChristmasTree from '../imports/Frame48097540';
 import ChristmasBalls from '../imports/Frame48097541';
 import CandyCane from '../imports/Vector';
@@ -36,8 +38,151 @@ export function DayContent({ day, isCompleted, onComplete, onBack, totalComplete
   const [showSnow, setShowSnow] = useState(true);
   const [isDayAccessible, setIsDayAccessible] = useState<boolean | null>(null);
   const [accessCheckLoading, setAccessCheckLoading] = useState(true);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const content = getDayContent(day);
   const progress = (totalCompleted / 24) * 100;
+
+  // Функція генерації PDF з контенту сторінки
+  const handleDownloadPdf = async () => {
+    setIsGeneratingPdf(true);
+    
+    try {
+      console.log('Starting PDF generation...');
+      
+      // Знаходимо контейнер з контентом дня
+      const contentElement = document.querySelector('.day-content-container');
+      
+      if (!contentElement) {
+        console.error('Content container not found');
+        alert('Помилка: не вдалося знайти контент для генерації PDF');
+        setIsGeneratingPdf(false);
+        return;
+      }
+
+      console.log('Content element found, creating canvas...');
+
+      // Створюємо canvas з HTML контенту
+      const canvas = await html2canvas(contentElement as HTMLElement, {
+        scale: 1.5,
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: '#e8e4e1',
+        logging: false,
+        ignoreElements: (element) => {
+          // Ігноруємо елементи, які можуть спричинити проблеми
+          return element.classList?.contains('no-pdf') || false;
+        },
+        onclone: (clonedDoc) => {
+          // Замінюємо всі сучасні CSS кольори на звичайні hex/rgb
+          const allElements = clonedDoc.querySelectorAll('*');
+          allElements.forEach((el) => {
+            const htmlEl = el as HTMLElement;
+            const computedStyle = window.getComputedStyle(htmlEl);
+            
+            // Функція для перевірки та заміни кольорів
+            const replaceModernColor = (colorValue: string, fallbackColor: string): string => {
+              if (colorValue && (
+                colorValue.includes('oklch') || 
+                colorValue.includes('oklab') || 
+                colorValue.includes('lab(') || 
+                colorValue.includes('lch(')
+              )) {
+                return fallbackColor;
+              }
+              return colorValue;
+            };
+            
+            // Конвертуємо всі кольори в rgb/hex формат
+            if (computedStyle.color) {
+              htmlEl.style.color = replaceModernColor(computedStyle.color, 'rgb(30, 58, 95)');
+            }
+            if (computedStyle.backgroundColor) {
+              htmlEl.style.backgroundColor = replaceModernColor(computedStyle.backgroundColor, 'rgb(232, 228, 225)');
+            }
+            if (computedStyle.borderColor) {
+              htmlEl.style.borderColor = replaceModernColor(computedStyle.borderColor, 'rgb(45, 90, 61)');
+            }
+            if (computedStyle.borderTopColor) {
+              htmlEl.style.borderTopColor = replaceModernColor(computedStyle.borderTopColor, 'rgb(45, 90, 61)');
+            }
+            if (computedStyle.borderRightColor) {
+              htmlEl.style.borderRightColor = replaceModernColor(computedStyle.borderRightColor, 'rgb(45, 90, 61)');
+            }
+            if (computedStyle.borderBottomColor) {
+              htmlEl.style.borderBottomColor = replaceModernColor(computedStyle.borderBottomColor, 'rgb(45, 90, 61)');
+            }
+            if (computedStyle.borderLeftColor) {
+              htmlEl.style.borderLeftColor = replaceModernColor(computedStyle.borderLeftColor, 'rgb(45, 90, 61)');
+            }
+            if (computedStyle.outlineColor) {
+              htmlEl.style.outlineColor = replaceModernColor(computedStyle.outlineColor, 'rgb(45, 90, 61)');
+            }
+            
+            // Обробка box-shadow та text-shadow
+            if (computedStyle.boxShadow && computedStyle.boxShadow !== 'none') {
+              htmlEl.style.boxShadow = computedStyle.boxShadow.replace(/oklch\([^)]+\)|oklab\([^)]+\)|lab\([^)]+\)|lch\([^)]+\)/g, 'rgba(0,0,0,0.1)');
+            }
+            if (computedStyle.textShadow && computedStyle.textShadow !== 'none') {
+              htmlEl.style.textShadow = computedStyle.textShadow.replace(/oklch\([^)]+\)|oklab\([^)]+\)|lab\([^)]+\)|lch\([^)]+\)/g, 'rgba(0,0,0,0.1)');
+            }
+          });
+        },
+      });
+
+      console.log('Canvas created, generating PDF...');
+
+      // Створюємо PDF документ
+      const imgData = canvas.toDataURL('image/jpeg', 0.95); // Використовуємо JPEG для меншого розміру
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      const pdfWidth = 210; // A4 width in mm
+      const pdfHeight = 297; // A4 height in mm
+      const canvasWidth = canvas.width;
+      const canvasHeight = canvas.height;
+      
+      // Розраховуємо розміри для PDF
+      const ratio = canvasWidth / canvasHeight;
+      let imgWidth = pdfWidth - 20; // margins
+      let imgHeight = imgWidth / ratio;
+      
+      let heightLeft = imgHeight;
+      let position = 10; // top margin
+
+      // Додаємо першу сторінку
+      pdf.addImage(imgData, 'JPEG', 10, position, imgWidth, imgHeight);
+      heightLeft -= (pdfHeight - 20);
+
+      // Якщо контент не вміщується на одну сторінку - додаємо наступні
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight + 10; // add margin
+        pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 10, position, imgWidth, imgHeight);
+        heightLeft -= pdfHeight;
+      }
+
+      // Створюємо безпечну назву файлу (видаляємо спеціальні символи)
+      const safeTitle = (dynamicTheme?.title || content.title)
+        .replace(/[^a-zA-Z0-9а-яА-ЯіІїЇєЄґҐ\s]/g, '')
+        .replace(/\s+/g, '_')
+        .substring(0, 50); // обмежуємо довжину
+      
+      const fileName = `День_${day}_${safeTitle}.pdf`;
+      
+      console.log('Saving PDF:', fileName);
+      pdf.save(fileName);
+      
+      console.log('PDF generated successfully');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert(`Помилка при генерації PDF: ${error instanceof Error ? error.message : 'Невідома помилка'}`);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
 
   // Перевірка доступності дня через бекенд
   useEffect(() => {
@@ -449,7 +594,7 @@ export function DayContent({ day, isCompleted, onComplete, onBack, totalComplete
       </div>
 
       {/* Content */}
-      <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-12 max-w-4xl">
+      <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-12 max-w-4xl day-content-container">
         <div>
           {/* Day Header */}
           <div className="text-center mb-8 sm:mb-12 space-y-3 sm:space-y-4">
@@ -576,14 +721,16 @@ export function DayContent({ day, isCompleted, onComplete, onBack, totalComplete
             })()}
 
             <div className="flex gap-3 sm:gap-4 mt-6 sm:mt-8 flex-wrap">
-              {userTier === 'premium' && (
+              {(userTier === 'deep' || userTier === 'premium') && (
                 <Button
                   variant="outline"
                   className="border-2 hover:bg-[#2d5a3d]/10 text-xs sm:text-sm md:text-base px-3 sm:px-4 py-2 break-words"
                   style={{ borderColor: '#2d5a3d', color: '#2d5a3d', fontFamily: 'Arial, sans-serif' }}
+                  onClick={handleDownloadPdf}
+                  disabled={isGeneratingPdf}
                 >
                   <Download className="w-3 h-3 sm:w-4 sm:h-4 mr-2 flex-shrink-0" />
-                  <span>Завантажити PDF</span>
+                  <span>{isGeneratingPdf ? 'Генерація PDF...' : 'Завантажити PDF'}</span>
                 </Button>
               )}
             </div>
@@ -660,15 +807,16 @@ export function DayContent({ day, isCompleted, onComplete, onBack, totalComplete
                       <span>Портфоліо / Сайт</span>
                     </a>
                   )}
-                  
-                  {(dynamicExpert?.bonus || content.bonus) && (
-                    <div className="rounded-xl p-3 sm:p-4 border-2 mt-3 sm:mt-4" style={{ backgroundColor: 'rgba(45,90,61,0.1)', borderColor: 'rgba(45,90,61,0.13)' }}>
-                      <p className="text-xs sm:text-sm md:text-base whitespace-pre-line break-words" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>
-                        {dynamicExpert?.bonus || content.bonus}
-                      </p>
-                    </div>
-                  )}
                 </div>
+                
+                {/* Бонус від експерта - завжди видимий якщо є */}
+                {((dynamicExpert?.bonus && dynamicExpert.bonus.trim()) || (content.bonus && content.bonus.trim())) && (
+                  <div className="rounded-xl p-3 sm:p-4 border-2 mt-3 sm:mt-4" style={{ backgroundColor: 'rgba(45,90,61,0.1)', borderColor: 'rgba(45,90,61,0.13)' }}>
+                    <p className="text-xs sm:text-sm md:text-base whitespace-pre-line break-words" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>
+                      {dynamicExpert?.bonus || content.bonus}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

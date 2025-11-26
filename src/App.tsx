@@ -1,10 +1,9 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import { useState, useEffect, createContext, useContext } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams } from 'react-router';
 import { LandingPage } from './components/LandingPage';
 import { AuthPage } from './components/AuthPage';
 import { PricingPage } from './components/PricingPage';
 import { CalendarView } from './components/CalendarView';
-import { MobileCalendarView } from './components/MobileCalendarView';
 import { DayContent } from './components/DayContent';
 import { AdminPanel } from './components/AdminPanel';
 import { ContactsPage } from './components/ContactsPage';
@@ -12,6 +11,7 @@ import { OfferPage } from './components/OfferPage';
 import { PrivacyPolicy } from './components/PrivacyPolicy';
 import { KVFormatTest } from './components/KVFormatTest';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { ProjectStatusChecker } from './components/ProjectStatusChecker';
 import { createClient } from './utils/supabase/client';
 import { projectId } from './utils/supabase/info';
 
@@ -78,45 +78,73 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       console.log('🔍 checkAuth: Fetching profile from server...');
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-dc8cbf1f/profile`,
-        {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        console.error('🔍 checkAuth: Profile fetch failed with status:', response.status);
-        localStorage.removeItem('advent_access_token');
-        setUserProfile(null);
-        setIsAdmin(false);
-        setCompletedDays(new Set());
-        setIsLoading(false);
-        return;
-      }
-
-      const profile = await response.json();
-      console.log('🔍 checkAuth: Profile received:', {
-        email: profile.email,
-        name: profile.name,
-        tier: profile.tier,
-        payment_status: profile.payment_status
-      });
-
-      setUserProfile(profile);
-      setIsAdmin(profile.email?.toLowerCase() === 'katywenka@gmail.com');
-      setCompletedDays(new Set(profile.progress || []));
-      setIsLoading(false);
       
-      console.log('✅ checkAuth: Profile updated successfully');
+      // Add timeout to fetch
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      try {
+        const response = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-dc8cbf1f/profile`,
+          {
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+            },
+            signal: controller.signal,
+          }
+        );
+        
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          console.error('🔍 checkAuth: Profile fetch failed with status:', response.status);
+          
+          // Don't clear token on 5xx errors (server issues)
+          if (response.status >= 500) {
+            console.log('🔍 checkAuth: Server error, keeping token for retry');
+            setIsLoading(false);
+            return;
+          }
+          
+          // Clear token on 4xx errors (auth issues)
+          localStorage.removeItem('advent_access_token');
+          setUserProfile(null);
+          setIsAdmin(false);
+          setCompletedDays(new Set());
+          setIsLoading(false);
+          return;
+        }
+
+        const profile = await response.json();
+        console.log('🔍 checkAuth: Profile received:', {
+          email: profile.email,
+          name: profile.name,
+          tier: profile.tier,
+          payment_status: profile.payment_status
+        });
+
+        setUserProfile(profile);
+        setIsAdmin(profile.email?.toLowerCase() === 'katywenka@gmail.com');
+        setCompletedDays(new Set(profile.progress || []));
+        setIsLoading(false);
+        
+        console.log('✅ checkAuth: Profile updated successfully');
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        
+        // Handle network errors separately
+        if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+          console.error('🔍 checkAuth: Request timeout');
+        } else {
+          console.error('🔍 checkAuth: Network error:', fetchError);
+        }
+        
+        // Don't clear token on network errors, just set loading to false
+        setIsLoading(false);
+      }
     } catch (error) {
       console.error('❌ checkAuth: Error:', error);
-      localStorage.removeItem('advent_access_token');
-      setUserProfile(null);
-      setIsAdmin(false);
-      setCompletedDays(new Set());
+      // On general errors, also don't immediately clear token
       setIsLoading(false);
     }
   };
@@ -223,13 +251,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
     } catch (error) {
       console.error('loadUnlockedDays - Error:', error);
-      alert('Помилка при завантаженні розблокованих днів. Будь ласка, спробуйте ще раз.');
+      // Не показуємо alert - просто логуємо помилку
+      setUnlockedDays([]);
     }
   };
 
   useEffect(() => {
-    checkAuth();
-    loadUnlockedDays(); // Завантажуємо розблоковані дні при старті
+    const init = async () => {
+      await checkAuth(); // Спочатку перевіряємо авторизацію
+      await loadUnlockedDays(); // Потім завантажуємо дні (коли токен вже є)
+    };
+    init();
   }, []);
 
   return (
@@ -363,7 +395,7 @@ function PricingRoute() {
 // Calendar Route
 function CalendarRoute() {
   const navigate = useNavigate();
-  const { userProfile, isAdmin, completedDays, adminUnlockAll, signOut, isLoading } = useAuth();
+  const { userProfile, isAdmin, completedDays, adminUnlockAll, unlockedDays, signOut, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -413,6 +445,7 @@ function CalendarRoute() {
         onAdminClick={isAdmin ? handleAdminClick : undefined}
         isAdmin={isAdmin}
         adminUnlockAll={adminUnlockAll}
+        unlockedDays={unlockedDays}
       />
     </ErrorBoundary>
   );
@@ -501,8 +534,12 @@ function DebugInfo() {
 
 // Main App with Router
 function AppContent() {
+  const [isProjectHealthy, setIsProjectHealthy] = useState(false);
+
   return (
     <div className="min-h-screen bg-[#faf8f5]">
+      {/* Temporarily disabled to reduce BigQuery quota usage */}
+      {/* <ProjectStatusChecker onStatusChange={setIsProjectHealthy} /> */}
       <Routes>
         <Route path="/" element={<LandingRoute />} />
         <Route path="/auth" element={<AuthRoute />} />

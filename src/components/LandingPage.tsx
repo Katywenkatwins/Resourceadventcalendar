@@ -8,7 +8,8 @@ import {
 } from "./ui/accordion";
 import { Button } from './ui/button';
 import { Link } from 'react-router';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo, memo } from 'react';
+import { motion, useInView } from 'motion/react';
 import ChristmasTree from '../imports/Frame48097540';
 import ChristmasBalls from '../imports/Frame48097541';
 import CandyCane from '../imports/Vector';
@@ -17,6 +18,8 @@ import GiftsWithDecor from '../imports/Vector-43-1850';
 import GiftsDecoration from '../imports/Vector2-51-1334';
 import SnowflakeDecor from '../imports/Frame48097520';
 import svgPaths from '../imports/svg-wnnef39ojp';
+import ExpertSlider from './ExpertSlider';
+import { CountdownTimer } from './CountdownTimer';
 
 interface LandingPageProps {
   onStart: () => void;
@@ -25,8 +28,8 @@ interface LandingPageProps {
   onGoToCalendar?: () => void;
 }
 
-// Декоративні SVG елементи з Figma
-function DecorativeBalls1() {
+// Декоративні SVG елементи з Figma - мемоізовані для оптимізації
+const DecorativeBalls1 = memo(function DecorativeBalls1() {
   return (
     <div className="absolute bottom-0 left-0 right-0 top-0">
       <div className="absolute inset-[30.32%_38.15%_38.93%_15.83%]">
@@ -82,9 +85,9 @@ function DecorativeBalls1() {
       </div>
     </div>
   );
-}
+});
 
-function DecorativeCandy() {
+const DecorativeCandy = memo(function DecorativeCandy() {
   return (
     <div className="absolute bottom-0 left-0 right-[0.15%] top-0">
       <div className="absolute bottom-0 left-0 right-[0.15%] top-0">
@@ -94,9 +97,9 @@ function DecorativeCandy() {
       </div>
     </div>
   );
-}
+});
 
-function DecorativeGift() {
+const DecorativeGift = memo(function DecorativeGift() {
   return (
     <div className="h-[143.02px] w-[96.322px]">
       <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 97 144">
@@ -109,15 +112,216 @@ function DecorativeGift() {
       </svg>
     </div>
   );
-}
+});
+
+// Компонент для анімованих секцій з появою на скролл
+const AnimatedSection = memo(function AnimatedSection({ 
+  children, 
+  direction = 'left',
+  delay = 0 
+}: { 
+  children: React.ReactNode; 
+  direction?: 'left' | 'right';
+  delay?: number;
+}) {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, amount: 0.05, margin: "0px 0px -50px 0px" });
+
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ 
+        opacity: 0, 
+        x: direction === 'left' ? -100 : 100 
+      }}
+      animate={isInView ? { 
+        opacity: 1, 
+        x: 0 
+      } : { 
+        opacity: 0, 
+        x: direction === 'left' ? -100 : 100 
+      }}
+      transition={{ 
+        duration: 0.8, 
+        delay,
+        ease: [0.25, 0.1, 0.25, 1]
+      }}
+      style={{ 
+        visibility: 'visible',
+        minHeight: 'fit-content'
+      }}
+    >
+      {children}
+    </motion.div>
+  );
+});
+
+// Константи для експертів бонусів - винесено для оптимізації
+const VIP_EXPERTS = [
+  {
+    name: 'Сміян Катерина',
+    role: 'Веб-дизайнерка, стратег і творча менторка',
+    instagram: 'https://www.instagram.com/kateryna_smiian/',
+    instagramHandle: '@kateryna_smiian',
+    photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/img/Frame%20289%203.png?raw=true',
+    bonus: 'Експрес-діагностика бренду / сайту / сторінки (30 хвилин)',
+    description: 'Швидкий, але дуже точний аудит з конкретними правками.',
+    color: '#e6963a'
+  },
+  {
+    name: 'Тетяна Славік',
+    role: 'Психолог',
+    instagram: 'https://www.instagram.com/tanya.slavik/',
+    instagramHandle: '@tanya.slavik',
+    photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Slavik.png?raw=true',
+    bonus: '1,5 годинна сесія із повним закриттям запиту',
+    description: 'Підсвітимо звідки іде запит і що з ним робити, працюю у науково доказових методах.',
+    color: '#2d5a3d'
+  },
+  {
+    name: 'Іра Іванова',
+    role: 'Наставник жінок, Access bars, МАКкарти, Лідерка української компанії Choice',
+    instagram: 'https://www.instagram.com/ira_nova_ivanova/',
+    instagramHandle: '@ira_nova_ivanova',
+    photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Ivanova.png?raw=true',
+    bonus: 'Сесія МАК, один запит, тривалість 60-90 хвилин',
+    description: 'Можливий як онлайн так і офлайн формати. Також подарунок від мене кожному, хто прийде на сесію доглядові засоби від бренду White Mandarin.',
+    color: '#d94a4a'
+  },
+  {
+    name: 'Ірина Вернигора',
+    role: 'Астропсихолог, коуч',
+    instagram: 'https://www.instagram.com/astra.kotiki/',
+    instagramHandle: '@astra.kotiki',
+    photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Vernygora.png?raw=true',
+    bonus: 'Колода персональних карт-афірмацій та підбір мінералів по натальній карті',
+    description: 'Унікальний набір персональних інструментів для вашої трансформації.',
+    color: '#1e3a5f'
+  },
+  {
+    name: 'Ванесса Січ',
+    role: 'Візажист-стиліст, викладачка бюті курсів',
+    instagram: 'https://www.instagram.com/vanessa.sich/',
+    instagramHandle: '@vanessa.sich',
+    photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Sich.png?raw=true',
+    bonus: 'Урок "Сам собі візажист"',
+    description: 'Навчу створювати ідеальний макіяж для себе в домашніх умовах.',
+    color: '#e6963a'
+  },
+  {
+    name: 'Ксенія Недолуженко',
+    role: 'Лікар-дерматолог, психотерапевтка, художниця та авторка метафоричної колоди карт «Шлях трансформації»',
+    instagram: 'https://www.instagram.com/dr_kseniya_nedoluzhenko/',
+    instagramHandle: '@dr_kseniya_nedoluzhenko',
+    photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Nedolu.png?raw=true',
+    bonus: 'Авторська колода МАК карт',
+    description: 'Унікальний інструмент для самопізнання та трансформації.',
+    color: '#2d5a3d'
+  },
+  {
+    name: 'Летиція Дубовик',
+    role: 'Провідник для жінок. Досліджую, що і як нас робить по-справжньому проявленими',
+    instagram: 'https://www.instagram.com/letytsia_d',
+    instagramHandle: '@letytsia_d',
+    photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Letic.png?raw=true',
+    bonus: 'Потокова сесія (90 хв)',
+    description: 'Глибоке дослідження вашої справжньої природи та прояву.',
+    color: '#d94a4a'
+  },
+  {
+    name: 'Ірина Фалатович',
+    role: 'Експертка з монетизації та просування інстаграм',
+    instagram: 'https://www.instagram.com/ira.falatovych/',
+    instagramHandle: '@ira.falatovych',
+    photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/falatovich.png?raw=true',
+    bonus: 'Стратегічна сесія, яка перезапустить твій блог і прибере все зайве',
+    description: 'Формат: онлайн зустріч тривалістю 60-90 хв.',
+    color: '#1e3a5f'
+  },
+  {
+    name: 'Андріана Кушнір',
+    role: 'Арт-терапія',
+    instagram: 'https://www.instagram.com/andrianna_kushnir/',
+    instagramHandle: '@andrianna_kushnir',
+    photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Kushnir.png?raw=true',
+    bonus: 'Арт-терапевтична сесія «Хто я» та «Мама та дитина»',
+    description: 'Глибока арт-терапевтична практика для самопізнання та розкриття вашої справжньої сутності.',
+    color: '#e6963a'
+  },
+  {
+    name: 'Катерина Вишня',
+    role: 'Стилістка 45+, менторка жіночих брендів',
+    instagram: 'https://www.instagram.com/vyshnya.brand.stylist/',
+    instagramHandle: '@vyshnya.brand.stylist',
+    photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Vushnya.png?raw=true',
+    bonus: 'Кольорова карта персонального стилю',
+    description: 'Унікальна кольорова карта, створена спеціально для вас, яка розкриє ваш персональний стиль.',
+    color: '#2d5a3d'
+  },
+  {
+    name: 'Анна Канаха',
+    role: 'Fashion-психолог, стиліст та експерт з психологічного портрету особистості',
+    instagram: 'https://www.instagram.com/anna.kanakha/',
+    instagramHandle: '@anna.kanakha',
+    photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Kanakha.png?raw=true',
+    bonus: 'Індивідуальний річний прогноз 2026',
+    description: 'Персональний прогноз на 2026 рік на основі психологічного портрету та системи Архетипів.',
+    color: '#d94a4a'
+  },
+];
+
+// Константи для партнерів - винесено для оптимізації
+const PARTNERS_ROW_1 = [
+  { name: 'Lebet Project', logo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/lebet.png?raw=true', link: 'https://www.instagram.com/lebet.project/' },
+  { name: 'Irina Kaniuk', logo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/image%2048.png?raw=true', link: 'https://www.instagram.com/irina_kaniuk_/' },
+];
+
+const PARTNERS_ROW_2 = [];
+
+// Константи для кроків - винесено для оптимізації
+const STEPS_DATA = [
+  {
+    number: '1',
+    title: 'Реєструєшся і обираєш свій тариф',
+    description: 'Після оплати отримаєш доступ до інтерактивного календаря. Та запрошення в ТГ-канал спільноти',
+    color: '#2d5a3d',
+    bgColor: 'rgba(45,90,61,0.13)',
+    borderColor: 'rgba(45,90,61,0.19)',
+    DecorIcon: DecorativeBalls1,
+  },
+  {
+    number: '2',
+    title: 'Щодня о 6:00 ранку відкривається нова "дверцята"',
+    description: 'Всередині — коротке відео від експерта, практика чи медитація, чек-лист або гайд.',
+    color: '#d94a4a',
+    bgColor: 'rgba(217,74,74,0.13)',
+    borderColor: 'rgba(217,74,74,0.19)',
+    DecorIcon: DecorativeCandy,
+  },
+  {
+    number: '3',
+    title: 'Виконуєш і відмічаєш "готово"',
+    description: 'Спостерігай, як наповнюється твій ресурс і прогрес-бар — день за днем. А вкінці розіграш для тих, хто пройшов всі 24 дні з нами',
+    color: '#e6963a',
+    bgColor: 'rgba(230,150,58,0.13)',
+    borderColor: 'rgba(230,150,58,0.19)',
+    DecorIcon: DecorativeGift,
+  },
+];
+
+// Константи для тем - винесено для оптимізації
+const THEMES_DATA = [
+  { text: 'Заспокоїти тіло', icon: Heart },
+  { text: 'Зміцнити емоції', icon: Sparkles },
+  { text: 'Висвітлити цінності', icon: Star },
+  { text: 'Укріпити кордони', icon: Shield },
+  { text: 'Розширити бачення', icon: Globe },
+  { text: 'Відпустити минуле', icon: Wind },
+  { text: 'Налаштуватися на дію', icon: Target },
+  { text: '…і ще 17 кроків твоєї магічної подорожі', icon: Sparkles },
+];
 
 export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalendar }: LandingPageProps) {
-  const [timeLeft, setTimeLeft] = useState({
-    days: 0,
-    hours: 0,
-    minutes: 0,
-    seconds: 0,
-  });
 
   const handleMainAction = () => {
     if (isAuthenticated && onGoToCalendar) {
@@ -132,69 +336,7 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
     aboutSection?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  useEffect(() => {
-    // Адвент-календар стартує 1 грудня 2025
-    const adventStart = new Date('2025-12-01T00:00:00');
-    
-    const timer = setInterval(() => {
-      const now = new Date();
-      const difference = adventStart.getTime() - now.getTime();
-      
-      if (difference > 0) {
-        setTimeLeft({
-          days: Math.floor(difference / (1000 * 60 * 60 * 24)),
-          hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
-          minutes: Math.floor((difference / 1000 / 60) % 60),
-          seconds: Math.floor((difference / 1000) % 60),
-        });
-      } else {
-        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-      }
-    }, 1000);
 
-    return () => clearInterval(timer);
-  }, []);
-
-  const steps = [
-    {
-      number: '1',
-      title: 'Реєструєшся і обираєш свій тариф',
-      description: 'Після оплати отримаєш доступ до інтерактивного календаря. Та запрошення в ТГ-канал спільноти',
-      color: '#2d5a3d',
-      bgColor: 'rgba(45,90,61,0.13)',
-      borderColor: 'rgba(45,90,61,0.19)',
-      DecorIcon: DecorativeBalls1,
-    },
-    {
-      number: '2',
-      title: 'Щодня о 6:00 ранку відкривається нова "дверцята"',
-      description: 'Всередині — коротке відео від експерта, практика чи медитація, чек-лист або гайд.',
-      color: '#d94a4a',
-      bgColor: 'rgba(217,74,74,0.13)',
-      borderColor: 'rgba(217,74,74,0.19)',
-      DecorIcon: DecorativeCandy,
-    },
-    {
-      number: '3',
-      title: 'Виконуєш і відмічаєш "готово"',
-      description: 'Спостерігай, як наповнюється твій ресурс і прогрес-бар — день за днем. А вкінці розіграш для тих, хто пройшов всі 24 дні з нами',
-      color: '#e6963a',
-      bgColor: 'rgba(230,150,58,0.13)',
-      borderColor: 'rgba(230,150,58,0.19)',
-      DecorIcon: DecorativeGift,
-    },
-  ];
-
-  const themes = [
-    { text: 'Заспокоїти тіло', icon: Heart },
-    { text: 'Зміцнити емоції', icon: Sparkles },
-    { text: 'Висвітлити цінності', icon: Star },
-    { text: 'Укріпити кордони', icon: Shield },
-    { text: 'Розширити бачення', icon: Globe },
-    { text: 'Відпустити минуле', icon: Wind },
-    { text: 'Налаштуватися на дію', icon: Target },
-    { text: '…і ще 17 кроків твоєї магічної подорожі', icon: Sparkles },
-  ];
 
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#e8e4e1' }}>
@@ -226,7 +368,8 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
         <ChristmasBalls />
       </div>
       
-      <div className="fixed top-20 right-10 opacity-20 pointer-events-none z-0 w-[60px] sm:w-[100px] md:w-[120px]">
+      {/* Олень - збільшений на 30% і ближче до кута */}
+      <div className="fixed top-5 right-5 opacity-20 pointer-events-none z-0 w-[78px] sm:w-[130px] md:w-[156px]">
         <ChristmasTree />
       </div>
       
@@ -238,7 +381,8 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
         <CandyCane />
       </div>
       
-      <div className="fixed bottom-10 left-10 opacity-60 pointer-events-none z-0 w-[100px] sm:w-[150px] md:w-[200px]">
+      {/* Подарунки - збільшені на 30% і ближче до кута */}
+      <div className="fixed bottom-5 left-5 opacity-60 pointer-events-none z-0 w-[130px] sm:w-[195px] md:w-[260px]">
         <GiftsWithDecor />
       </div>
       
@@ -250,7 +394,10 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
       <div className="relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-20 lg:py-32 relative">
           <div className="text-center space-y-6 sm:space-y-8">
-            <h1 
+            <motion.h1 
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1] }}
               className="text-3xl sm:text-4xl md:text-5xl lg:text-[60px] leading-tight sm:leading-[1.2] lg:leading-[48px]" 
               style={{ 
                 color: '#2d5a3d',
@@ -259,13 +406,24 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
               }}
             >
               24 дні до твого оновлення
-            </h1>
+            </motion.h1>
             
-            <p className="text-lg sm:text-xl md:text-2xl lg:text-[24px] max-w-4xl mx-auto leading-relaxed px-4" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>
+            <motion.p 
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+              className="text-lg sm:text-xl md:text-2xl lg:text-[24px] max-w-4xl mx-auto leading-relaxed px-4" 
+              style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}
+            >
               Інтерактивна подорож до себе — через практики, енергію й натхнення.
-            </p>
+            </motion.p>
 
-            <div className="max-w-3xl mx-auto space-y-4 px-4">
+            <motion.div 
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
+              className="max-w-3xl mx-auto space-y-4 px-4"
+            >
               <p className="text-base sm:text-lg md:text-xl lg:text-[20px] leading-[28px]" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>
                 Щодня відкривай нові дверцята — всередині тебе і на сайті.
               </p>
@@ -273,30 +431,27 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
                 Медитації, практики, міні-відео, поради й сюрпризи від 24 експертів — <br className="hidden sm:block" />
                 щоб зустріти Новий рік у спокої, ресурсі й натхненні.
               </p>
-            </div>
+            </motion.div>
 
             {/* Timer */}
-            <div className="max-w-2xl mx-auto bg-white/70 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-xl border-2 mx-4" style={{ borderColor: 'rgba(45,90,61,0.13)' }}>
-              <p className="text-lg sm:text-xl mb-4" style={{ color: '#2d5a3d', fontFamily: 'Arial, sans-serif' }}>Стартуємо 1 грудня 2025</p>
-              <div className="grid grid-cols-4 gap-2 sm:gap-4">
-                {[
-                  { label: 'Днів', value: timeLeft.days },
-                  { label: 'Годин', value: timeLeft.hours },
-                  { label: 'Хвилин', value: timeLeft.minutes },
-                  { label: 'Секунд', value: timeLeft.seconds },
-                ].map((item) => (
-                  <div key={item.label} className="text-center bg-gradient-to-br from-white to-gray-50 rounded-xl p-3 shadow-md border" style={{ borderColor: 'rgba(217,74,74,0.2)' }}>
-                    <div className="text-3xl sm:text-4xl md:text-5xl mb-2 tabular-nums" style={{ color: '#d94a4a', fontFamily: 'Arial, sans-serif' }}>
-                      {String(item.value).padStart(2, '0')}
-                    </div>
-                    <div className="text-xs sm:text-sm" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>{item.label}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8, delay: 0.6, ease: [0.25, 0.1, 0.25, 1] }}
+              className="max-w-2xl mx-auto bg-white/70 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-xl border-2 mx-4" 
+              style={{ borderColor: 'rgba(45,90,61,0.13)' }}
+            >
+              <p className="text-lg sm:text-xl mb-4" style={{ color: '#2d5a3d', fontFamily: 'Arial, sans-serif' }}>Стартуємо 1 грудня 2025 о 08:00</p>
+              <CountdownTimer />
+            </motion.div>
 
             {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-8 px-4">
+            <motion.div 
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.8, ease: [0.25, 0.1, 0.25, 1] }}
+              className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-8 px-4"
+            >
               <Button
                 onClick={handleMainAction}
                 size="lg"
@@ -316,7 +471,7 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
               >
                 Дізнатись більше
               </Button>
-            </div>
+            </motion.div>
           </div>
         </div>
       </div>
@@ -325,8 +480,9 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24 space-y-16 sm:space-y-24 lg:space-y-32">
         
         {/* About Section */}
-        <div id="about-section" className="mt-12 sm:mt-16 lg:mt-24 scroll-mt-24">
-          <div className="max-w-4xl mx-auto text-center space-y-6 bg-white/70 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-8 sm:p-12 shadow-xl border-2" style={{ borderColor: 'rgba(45,90,61,0.13)' }}>
+        <AnimatedSection direction="left">
+          <div id="about-section" className="mt-12 sm:mt-16 lg:mt-24 scroll-mt-24">
+            <div className="max-w-4xl mx-auto text-center space-y-6 bg-white/70 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-8 sm:p-12 shadow-xl border-2" style={{ borderColor: 'rgba(45,90,61,0.13)' }}>
             <h2 
               className="text-3xl sm:text-4xl md:text-5xl lg:text-[60px] leading-tight sm:leading-[48px]" 
               style={{ 
@@ -351,6 +507,34 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
               <p className="text-lg sm:text-xl lg:text-[24px] leading-[32px] pt-4" style={{ color: '#d94a4a' }}>
                 Ніяких довгих лекцій — лише 10–15 хвилин на день, щоб наповнитись і налаштуватись на новий рік.
               </p>
+
+              {/* Благодійна місія */}
+              <div className="pt-6 space-y-3 bg-gradient-to-br from-[#2d5a3d]/10 to-[#d94a4a]/10 rounded-2xl p-6 border-2" style={{ borderColor: '#2d5a3d' }}>
+                <p className="text-lg sm:text-xl lg:text-[20px] leading-[28px] flex items-start gap-2" style={{ color: '#2d5a3d', fontWeight: 'bold' }}>
+                  <Heart className="w-6 h-6 flex-shrink-0 mt-1" style={{ color: '#d94a4a' }} />
+                  Цього року проєкт матиме ще одну важливу місію:
+                </p>
+                <p className="text-sm sm:text-base lg:text-[16px] leading-[24px]">
+                  частину коштів з кожного продажу ми передаємо в БФ "Маємо Жити" на подарунки дітям полеглих героїв до Дня св. Миколая.
+                </p>
+                <p className="text-sm sm:text-base lg:text-[16px] leading-[24px]">
+                  А ще — 100 жінок спільноти "Маємо Жити" - дружин полеглих воїнів, зможуть пройти марафон безкоштовно.
+                </p>
+                <p className="text-base sm:text-lg lg:text-[18px] leading-[26px] pt-2 italic" style={{ color: '#2d5a3d' }}>
+                  Ми хочемо, щоб тепло проєкту відчули ті, кому зараз найскладніше.
+                </p>
+              </div>
+
+              {/* Розіграш подарунків */}
+              <div className="pt-4 space-y-3 bg-gradient-to-br from-[#d94a4a]/10 to-[#CF7A2C]/10 rounded-2xl p-6 border-2" style={{ borderColor: '#d94a4a' }}>
+                <p className="text-lg sm:text-xl lg:text-[20px] leading-[28px] flex items-start gap-2" style={{ color: '#d94a4a', fontWeight: 'bold' }}>
+                  <Gift className="w-6 h-6 flex-shrink-0 mt-1" />
+                  Розіграш подарунків від партнерів
+                </p>
+                <p className="text-sm sm:text-base lg:text-[16px] leading-[24px]">
+                  Всі учасниці марафону автоматично беруть участь у розіграші цінних подарунків від наших партнерів. Чим активніше ти проходиш практики — тим більше шансів виграти!
+                </p>
+              </div>
             </div>
 
             <div className="pt-8">
@@ -361,8 +545,44 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
             </div>
           </div>
         </div>
+        </AnimatedSection>
+
+        {/* Video Section - Як виг��ядає Адвент Календар */}
+        <AnimatedSection direction="right">
+        <div className="max-w-5xl mx-auto px-4">
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-6 sm:p-10 shadow-xl border-2 space-y-6" style={{ borderColor: 'rgba(45,90,61,0.13)' }}>
+            <h2 
+              className="text-center text-3xl sm:text-4xl md:text-5xl lg:text-[60px] leading-tight sm:leading-[48px]" 
+              style={{ 
+                color: '#2d5a3d',
+                fontFamily: "'Dela Gothic One', sans-serif",
+                letterSpacing: '-2px'
+              }}
+            >
+              Як виглядає Адвент Календар
+            </h2>
+            
+            <p className="text-center text-lg sm:text-xl lg:text-[20px] leading-[28px]" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>
+              Інтерактивний календар з 24 дверцятами — кожен день нова практика від експерта
+            </p>
+
+            {/* YouTube Video Embed */}
+            <div className="relative w-full pt-[56.25%] rounded-xl overflow-hidden shadow-2xl">
+              <iframe
+                className="absolute top-0 left-0 w-full h-full"
+                src="https://www.youtube.com/embed/xXp3TXVJWBw?start=1"
+                title="Адвент Календар - Демо"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                style={{ border: 'none' }}
+              />
+            </div>
+          </div>
+        </div>
+        </AnimatedSection>
 
         {/* How It Works Section */}
+        <AnimatedSection direction="left">
         <div className="space-y-8 sm:space-y-12">
           <h2 
             className="text-center text-3xl sm:text-4xl md:text-5xl lg:text-[60px] leading-tight sm:leading-[48px]" 
@@ -376,7 +596,7 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-            {steps.map((step, idx) => (
+            {STEPS_DATA.map((step, idx) => (
               <div
                 key={idx}
                 className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 sm:p-8 shadow-lg border-2 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 relative overflow-hidden min-h-[280px] sm:min-h-[300px]"
@@ -416,8 +636,10 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
             ))}
           </div>
         </div>
+        </AnimatedSection>
 
         {/* What You'll Get Section */}
+        <AnimatedSection direction="right">
         <div className="space-y-8 sm:space-y-12">
           <div className="text-center space-y-3 sm:space-y-4">
             <h2 
@@ -439,7 +661,7 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 max-w-4xl mx-auto">
-            {themes.map((theme, idx) => {
+            {THEMES_DATA.map((theme, idx) => {
               const IconComponent = theme.icon;
               return (
                 <div
@@ -479,10 +701,24 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
                 </div>
               ))}
             </div>
+            
+            {/* Кнопка обрати тариф */}
+            <div className="text-center pt-4 sm:pt-6 relative z-10">
+              <a href="#pricing">
+                <Button 
+                  className="bg-white text-[#2d5a3d] hover:bg-white/90 px-8 sm:px-10 py-4 sm:py-6 text-base sm:text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                  style={{ fontFamily: 'Arial, sans-serif', fontWeight: 'bold' }}
+                >
+                  Обрати тариф
+                </Button>
+              </a>
+            </div>
           </div>
         </div>
+        </AnimatedSection>
 
         {/* Experts Section */}
+        <AnimatedSection direction="left">
         <div className="space-y-8 sm:space-y-12">
           <h2 
             className="text-center text-3xl sm:text-4xl md:text-5xl lg:text-[60px] leading-tight sm:leading-[48px]" 
@@ -512,23 +748,137 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
             </p>
 
             <p className="text-lg sm:text-xl text-center pt-4" style={{ color: '#d94a4a', fontFamily: 'Arial, sans-serif' }}>
-              Кожен із них — світло у своїй сфрі, і вони поділяться з тобою своїм ресурсом.
+              Кожен із них — світло у своїй сфері, і вони поділяться з тобою своїм ресурсом.
             </p>
 
-            {/* Expert Grid Placeholder */}
-            <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-12 gap-2 sm:gap-4 pt-6 sm:pt-8">
-              {[...Array(24)].map((_, i) => (
-                <div
-                  key={i}
-                  className="aspect-square rounded-full bg-gradient-to-br from-[#2d5a3d] to-[#e6963a] opacity-20 hover:opacity-40 transition-opacity duration-300"
-                />
+            {/* Expert Slider */}
+            <ExpertSlider experts={[
+              { name: 'Сміян Катерина', instagram: 'kateryna_smiian', description: 'Веб-дизайнерка, стратег і творча менторка', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/img/Frame%20289%203.png?raw=true' },
+              { name: 'Анастасія Черкіс', instagram: 'anastasiyacherkis', description: 'Тілесна терапевтка, йога тренер, жіночий ментор', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Cherkis.png?raw=true' },
+              { name: 'Тетяна Славік', instagram: 'tanya.slavik', description: 'Психолог', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Slavik.png?raw=true' },
+              { name: 'Чеканська Джулі', instagram: 'musicjully.art', description: 'Музикантка, композиторка', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Chekanska.png?raw=true' },
+              { name: 'Олександр Король', instagram: 'dvaaya', description: 'Засновник школи буття «kNow»', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Korol.png?raw=true' },
+              { name: 'Іра Іванова', instagram: 'ira_nova_ivanova', description: 'Наставник жінок, Access bars, МАКкарти', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Ivanova.png?raw=true' },
+              { name: 'Ірина Вернигора', instagram: 'astra.kotiki', description: 'Астропсихолог, коуч', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Vernygora.png?raw=true' },
+              { name: 'Лабік Наталі', instagram: 'labyknatali', description: 'Йога-провідник', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Labik.png?raw=true' },
+              { name: 'Анна Стояновська', instagram: 'anna_greeen_', description: 'Ведичний нутріціолог', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Green.png?raw=true' },
+              { name: 'Ванесса Січ', instagram: 'vanessa.sich', description: 'Візажист-стиліст, викладачка бюті курсів', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Sich.png?raw=true' },
+              { name: 'Наталія Прокопчук', instagram: 'prokopchukart_com', description: 'Архітектор особистих брендів', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Prokop.png?raw=true' },
+              { name: 'Андріана Кушнір', instagram: 'andrianna_kushnir', description: 'Арт-терапія', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Kushnir.png?raw=true' },
+              { name: 'Саша', instagram: 'oleksandra.balance', description: 'Тренер з пілатесу', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Sasha.png?raw=true' },
+              { name: 'Ольга Карабіньош', instagram: 'o.karabinyosh', description: 'Перинатальна психологиня, ведуча жіночих практик', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Karab.png?raw=true' },
+              { name: 'Ксенія Недолуженко', instagram: 'dr_kseniya_nedoluzhenko', description: 'Лікар-дерматолог, психотерапевтка, художниця', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Nedolu.png?raw=true' },
+              { name: 'Летиція Дубовик', instagram: 'letytsia_d', description: 'Провідник для жінок', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Letic.png?raw=true' },
+              { name: 'Ірина Фалатович', instagram: 'ira.falatovych', description: 'Експертка з монетизації та просування Instagram', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/falatovich.png?raw=true' },
+              { name: 'Ірина Гончаренко', instagram: 'irahappylife_', description: 'Тренер з інтимної гімнастики та жіночої сексуальності', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/goncharenko.png?raw=true' },
+              { name: 'Катерина Вишня', instagram: 'vyshnya.brand.stylist', description: 'Стилістка 45+, менторка жіночих брендів', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Vushnya.png?raw=true' },
+              { name: 'Анна Канаха', instagram: 'anna.kanakha', description: 'Fashion-психолог, стиліст та експерт з психологічного портрету особистості по даті народження через систему Архетипів', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Kanakha.png?raw=true' },
+              { name: 'Ліля Братусь', instagram: 'lilibratus', description: 'Провідник до Жіночої Сили, Карпатська Чарівниця', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Lili.png?raw=true' },
+              { name: 'Крістіна Еліас', instagram: 'kristin.elias', description: 'Мультидисциплінарність. Наука × Духовність', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/KrisElias.png?raw=true' },
+              { name: 'Таня Прозорова', instagram: '', description: 'Тренерка дихання', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Prozor.png?raw=true' },
+            ]} />
+          </div>
+        </div>
+        </AnimatedSection>
+
+        {/* Partners Section */}
+        <AnimatedSection direction="left">
+        <div className="space-y-8 sm:space-y-12">
+          <h2 
+            className="text-center text-3xl sm:text-4xl md:text-5xl lg:text-[60px] leading-tight sm:leading-[48px]" 
+            style={{ 
+              color: '#2d5a3d',
+              fontFamily: "'Dela Gothic One', sans-serif",
+              letterSpacing: '-2px'
+            }}
+          >
+            Партнери проєкту
+          </h2>
+          
+          <div className="text-center space-y-4 max-w-3xl mx-auto px-4">
+            <p className="text-xl sm:text-2xl lg:text-[24px] leading-[32px]" style={{ color: '#d94a4a', fontFamily: 'Arial, sans-serif' }}>
+              Разом створюємо магію Адвент-календаря
+            </p>
+            <p className="text-base sm:text-lg lg:text-[18px] leading-[26px]" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>
+              Дякуємо нашим партнерам за підтримку проєкту та цінні подарунки для учасниць марафону
+            </p>
+          </div>
+
+          {/* Автоскролінг логотипів партнерів */}
+          <div className="relative overflow-hidden py-4">
+            <style dangerouslySetInnerHTML={{
+              __html: `
+                @keyframes scroll-left {
+                  0% { transform: translateX(0); }
+                  100% { transform: translateX(-50%); }
+                }
+                .animate-scroll {
+                  animation: scroll-left 30s linear infinite;
+                }
+                .animate-scroll:hover {
+                  animation-play-state: paused;
+                }
+              `
+            }} />
+            
+            {/* Перший рядок - рух вліво */}
+            <div className="flex gap-8 mb-6 animate-scroll">
+              {[...Array(2)].map((_, setIdx) => (
+                <div key={setIdx} className="flex gap-8 flex-shrink-0">
+                  {PARTNERS_ROW_1.map((partner, idx) => (
+                    <a
+                      key={idx}
+                      href={partner.link || '#'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`flex items-center justify-center flex-shrink-0 ${partner.name === 'Lebet' ? 'h-20 w-20' : 'h-20 w-40'}`}
+                    >
+                      <ImageWithFallback
+                        src={partner.logo}
+                        alt={partner.name}
+                        className={`grayscale opacity-70 hover:grayscale-0 hover:opacity-100 transition-all duration-300 ${partner.name === 'Lebet' ? 'w-20 h-20 rounded-full object-cover' : 'max-w-full max-h-full object-contain'}`}
+                      />
+                    </a>
+                  ))}
+                </div>
+              ))}
+            </div>
+
+            {/* Другий рядок - рух вліво */}
+            <div className="flex gap-8 mb-6 animate-scroll" style={{ animationDuration: '35s' }}>
+              {[...Array(2)].map((_, setIdx) => (
+                <div key={setIdx} className="flex gap-8 flex-shrink-0">
+                  {PARTNERS_ROW_2.map((partner, idx) => (
+                    <a
+                      key={idx}
+                      href={partner.link || '#'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`flex items-center justify-center flex-shrink-0 ${partner.name === 'Lebet' ? 'h-20 w-20' : 'h-20 w-40'}`}
+                    >
+                      <ImageWithFallback
+                        src={partner.logo}
+                        alt={partner.name}
+                        className={`grayscale opacity-70 hover:grayscale-0 hover:opacity-100 transition-all duration-300 ${partner.name === 'Lebet' ? 'w-20 h-20 rounded-full object-cover' : 'max-w-full max-h-full object-contain'}`}
+                      />
+                    </a>
+                  ))}
+                </div>
               ))}
             </div>
           </div>
+
+          <div className="text-center pt-6">
+            <p className="text-base sm:text-lg italic" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>
+              Хочете стати партнером проєкту? Напишіть нам!
+            </p>
+          </div>
         </div>
+        </AnimatedSection>
 
         {/* Pricing Section */}
-        <div className="space-y-8 sm:space-y-12">
+        <AnimatedSection direction="right">
+        <div id="pricing" className="space-y-8 sm:space-y-12" style={{ minHeight: '100px', visibility: 'visible', display: 'block' }}>
           <div className="text-center space-y-3 sm:space-y-4">
             <h2 
               className="text-3xl sm:text-4xl md:text-5xl lg:text-[60px] leading-tight sm:leading-[48px] px-4" 
@@ -552,7 +902,8 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
                   <div className="flex items-baseline gap-2">
                     <span className="text-4xl sm:text-5xl" style={{ color: '#2d5a3d', fontFamily: 'Arial, sans-serif' }}>€10</span>
                   </div>
-                  <p className="text-sm mt-2 opacity-70" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>24 дні практик</p>
+                  <p className="text-sm mt-1 opacity-70" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>24 дні практик</p>
+                  <p className="text-xs mt-1 opacity-60" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>~20 грн/день</p>
                 </div>
 
                 <div className="space-y-2 sm:space-y-3">
@@ -595,7 +946,8 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
                   <div className="flex items-baseline gap-2">
                     <span className="text-4xl sm:text-5xl" style={{ color: '#d94a4a', fontFamily: 'Arial, sans-serif' }}>€35</span>
                   </div>
-                  <p className="text-sm mt-2 opacity-70" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>+ чати, ефіри</p>
+                  <p className="text-sm mt-1 opacity-70" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>+ чати, ефіри</p>
+                  <p className="text-xs mt-1 opacity-60" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>~70 грн/день</p>
                 </div>
 
                 <div className="space-y-2 sm:space-y-3">
@@ -634,7 +986,8 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
                   <div className="flex items-baseline gap-2">
                     <span className="text-4xl sm:text-5xl" style={{ color: '#e6963a', fontFamily: 'Arial, sans-serif' }}>€100</span>
                   </div>
-                  <p className="text-sm mt-2 opacity-70" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>+ консультація, бонусні подарунки</p>
+                  <p className="text-sm mt-1 opacity-70" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>+ консультація, бонусні подарунки</p>
+                  <p className="text-xs mt-1 opacity-60" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>~200 грн/день</p>
                 </div>
 
                 <div className="space-y-2 sm:space-y-3">
@@ -674,7 +1027,7 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
 
         {/* Bonus Selection for "Диво" Tier */}
         <div className="max-w-5xl mx-auto px-4">
-          <div className="bg-gradient-to-br from-[#e6963a]/10 to-[#d94a4a]/10 rounded-3xl p-6 sm:p-8 shadow-2xl border-2 relative z-10" style={{ borderColor: '#e6963a' }}>
+          <div className="bg-gradient-to-br from-[#e6963a]/10 to-[#d94a4a]/10 rounded-3xl shadow-2xl border-2 relative z-10 p-2 min-[500px]:p-6 sm:p-8" style={{ borderColor: '#e6963a' }}>
             <div className="text-center space-y-3 mb-6">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full" style={{ backgroundColor: '#e6963a', color: 'white' }}>
                 <Star className="w-5 h-5" />
@@ -685,53 +1038,12 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
               </h3>
               <p className="text-sm sm:text-base max-w-2xl mx-auto px-2" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>
                 При виборі тарифу "Диво" ви обираєте один бонус зі списку нижче. <br />
-                Наші менеджери зв'яжуться з вами, зафіксують ваш вибір і організують бонус разом з експертом.
+                Наші менеджери зв'яжуться з вами, зафіксують ваш вибір і організують бонус разом з експертом. Обрати цей бонус можна і під час марафону після знайомства з експертом
               </p>
             </div>
 
             <Accordion type="single" collapsible className="space-y-3">
-              {[
-                {
-                  name: 'Олена Коваленко',
-                  role: 'Психолог, арт-терапевт',
-                  instagram: '@olena.kovalenko.therapy',
-                  bonus: 'Індивідуальна консультація з арт-терапії (90 хвилин)',
-                  description: 'Допоможу розкрити внутрішні ресурси через творчість. Разом створимо вашу особисту карту цілей і трансформацій на 2025 рік.',
-                  color: '#e6963a'
-                },
-                {
-                  name: 'Марія Петренко',
-                  role: 'Yoga & Meditation teacher',
-                  instagram: '@maria.yoga.flow',
-                  bonus: 'Персональна практика йоги + медитація (60 хвилин)',
-                  description: 'Створю для вас унікальну послідовність асан та медитацію, що відповідає саме вашим потребам та рівню підготовки.',
-                  color: '#2d5a3d'
-                },
-                {
-                  name: 'Анна Сидоренко',
-                  role: 'Нутриціолог, wellness-коуч',
-                  instagram: '@anna.wellness.coach',
-                  bonus: 'Персональний план харчування + консультація (90 хвилин)',
-                  description: 'Розроблю індивідуальний план харчування з урахуванням ваших цілей та особливостей організму. Навчу будувати здорові харчові звички.',
-                  color: '#d94a4a'
-                },
-                {
-                  name: 'Ірина Мельник',
-                  role: 'Бізнес-коуч, ментор',
-                  instagram: '@irina.business.mentor',
-                  bonus: 'Стратегічна сесія для професійного розвитку (120 хвилин)',
-                  description: 'Допоможу визначити вашу унікальну цінність, побудувати план кар\'єрного зростання та розкрити ваш потенціал на повну.',
-                  color: '#1e3a5f'
-                },
-                {
-                  name: 'Софія Ткаченко',
-                  role: 'Арт-терапевт, творчий коуч',
-                  instagram: '@sofia.art.therapy',
-                  bonus: 'Майстер-клас з інтуїтивного малювання (90 хвилин)',
-                  description: 'Проведу вас через терапевтичну практику малювання, де ви зможете виразити та трансформувати свої емоції через мистецтво.',
-                  color: '#e6963a'
-                },
-              ].map((expert, idx) => (
+              {VIP_EXPERTS.map((expert, idx) => (
                 <AccordionItem 
                   key={idx} 
                   value={`expert-${idx}`}
@@ -739,58 +1051,48 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
                   style={{ borderColor: 'rgba(230,150,58,0.3)' }}
                 >
                   <AccordionTrigger className="px-4 sm:px-5 py-3 sm:py-4 hover:no-underline">
-                    <div className="flex items-center gap-3 w-full text-left">
-                      <div
-                        className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-2 flex-shrink-0 flex items-center justify-center"
-                        style={{ 
-                          borderColor: expert.color,
-                          backgroundColor: `${expert.color}15`
-                        }}
-                      >
-                        <div 
-                          className="w-10 h-10 sm:w-12 sm:h-12 rounded-full"
-                          style={{ backgroundColor: expert.color }}
-                        />
-                      </div>
-                      <div className="flex-grow min-w-0">
-                        <h4 className="text-base sm:text-lg mb-0.5 truncate" style={{ color: '#2d5a3d', fontFamily: 'Arial, sans-serif', fontWeight: 'bold' }}>
-                          {expert.name}
-                        </h4>
-                        <p className="text-xs sm:text-sm mb-0.5 truncate" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>
-                          {expert.role}
-                        </p>
-                        <a 
-                          href={`https://instagram.com/${expert.instagram.replace('@', '')}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs sm:text-sm hover:underline inline-flex items-center gap-1"
-                          style={{ color: '#e6963a' }}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Users className="w-3 h-3" />
-                          {expert.instagram}
-                        </a>
+                    <div className="flex items-center justify-between gap-3 w-full text-left">
+                      <div className="text-base sm:text-lg" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>
+                        {expert.bonus}
                       </div>
                     </div>
                   </AccordionTrigger>
-                  <AccordionContent className="px-4 sm:px-5 pb-4 sm:pb-5 pt-1">
-                    <div className="space-y-3">
-                      <div className="p-3 rounded-xl" style={{ backgroundColor: 'rgba(230,150,58,0.1)' }}>
-                        <div className="flex items-start gap-2 mb-1">
-                          <Gift className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#e6963a' }} />
-                          <div>
-                            <p className="text-xs opacity-70 mb-1" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>
-                              Бонус:
-                            </p>
-                            <p className="text-sm sm:text-base" style={{ color: '#2d5a3d', fontFamily: 'Arial, sans-serif', fontWeight: 'bold' }}>
-                              {expert.bonus}
-                            </p>
-                          </div>
-                        </div>
+                  <AccordionContent className="px-4 sm:px-5 pb-4">
+                    <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 pt-2">
+                      {/* Фото експерта */}
+                      <div className="flex-shrink-0">
+                        <ImageWithFallback
+                          src={expert.photo}
+                          alt={expert.name}
+                          className="w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover border-4"
+                          style={{ borderColor: expert.color }}
+                        />
                       </div>
-                      <p className="text-xs sm:text-sm leading-relaxed" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>
-                        {expert.description}
-                      </p>
+                      
+                      {/* Інформація про експерта */}
+                      <div className="flex-grow space-y-2">
+                        <h4 className="text-lg sm:text-xl" style={{ color: expert.color, fontFamily: 'Arial, sans-serif', fontWeight: 'bold' }}>
+                          {expert.name}
+                        </h4>
+                        <p className="text-sm sm:text-base" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>
+                          {expert.role}
+                        </p>
+                        <p className="text-sm sm:text-base" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>
+                          {expert.description}
+                        </p>
+                        
+                        {/* Соцмережі */}
+                        <a 
+                          href={expert.instagram}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 text-sm sm:text-base hover:opacity-80 transition-opacity"
+                          style={{ color: expert.color, fontFamily: 'Arial, sans-serif' }}
+                        >
+                          <Users className="w-4 h-4" />
+                          <span>{expert.instagramHandle}</span>
+                        </a>
+                      </div>
                     </div>
                   </AccordionContent>
                 </AccordionItem>
@@ -804,8 +1106,10 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
             </div>
           </div>
         </div>
+        </AnimatedSection>
 
         {/* Testimonial Section */}
+        <AnimatedSection direction="left">
         <div className="max-w-4xl mx-auto px-4">
           <div className="bg-gradient-to-r from-[#d94a4a] to-[#e6963a] rounded-2xl sm:rounded-3xl p-8 sm:p-12 shadow-2xl text-white text-center space-y-4 sm:space-y-6 relative overflow-hidden">
             {/* Декоративна сніжинка в правому куті - під текстом */}
@@ -825,8 +1129,10 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
             </p>
           </div>
         </div>
+        </AnimatedSection>
 
         {/* Final CTA Section */}
+        <AnimatedSection direction="right">
         <div className="text-center space-y-6 sm:space-y-8 bg-white/70 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-8 sm:p-12 shadow-xl border-2 mx-4" style={{ borderColor: 'rgba(45,90,61,0.13)' }}>
           <h2 
             className="text-3xl sm:text-4xl md:text-5xl" 
@@ -863,23 +1169,10 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
               <Calendar className="w-5 h-5 sm:w-6 sm:h-6" />
               <p className="text-base sm:text-lg" style={{ fontFamily: 'Arial, sans-serif' }}>До старту залишилось:</p>
             </div>
-            <div className="grid grid-cols-4 gap-2 sm:gap-4">
-              {[
-                { label: 'Днів', value: timeLeft.days },
-                { label: 'Годин', value: timeLeft.hours },
-                { label: 'Хвилин', value: timeLeft.minutes },
-                { label: 'Секунд', value: timeLeft.seconds },
-              ].map((item) => (
-                <div key={item.label} className="text-center">
-                  <div className="text-2xl sm:text-3xl md:text-4xl mb-1" style={{ fontFamily: 'Arial, sans-serif' }}>
-                    {String(item.value).padStart(2, '0')}
-                  </div>
-                  <div className="text-xs opacity-80" style={{ fontFamily: 'Arial, sans-serif' }}>{item.label}</div>
-                </div>
-              ))}
-            </div>
+            <CountdownTimer dark />
           </div>
         </div>
+        </AnimatedSection>
       </div>
 
       {/* Footer */}
@@ -889,7 +1182,7 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
             © 2025 "Адвент-марафон ресурсу"
           </p>
           <p className="text-base sm:text-lg" style={{ color: '#d94a4a', fontFamily: 'Arial, sans-serif' }}>
-            Створено з любов'ю 
+            Створено з любов&apos;ю 
           </p>
           <div className="flex flex-wrap justify-center gap-4 sm:gap-8 text-sm pt-4" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>
             <Link to="/contacts" className="hover:underline">Контакти</Link>

@@ -29,32 +29,56 @@ export function AuthPage({ onAuthSuccess, onBackToHome }: AuthPageProps) {
     console.log('Sign in attempt for:', email);
 
     try {
-      const supabase = createClient();
+      // Use backend for sign in instead of direct Supabase Auth
+      console.log('Attempting to sign in via backend...');
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-dc8cbf1f/signin`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${publicAnonKey}`,
+          },
+          body: JSON.stringify({ email, password }),
+        }
+      );
 
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      console.log('Sign in response status:', response.status);
 
-      console.log('Sign in response:', { data, error: signInError });
-
-      if (signInError) {
-        setError(signInError.message);
-        console.error('Sign in error:', signInError);
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({ error: 'Помилка з\'єднання з сервером' }));
+        console.error('Sign in error:', data);
+        
+        if (response.status === 401) {
+          setError('Неправильний email або пароль');
+        } else if (response.status === 400) {
+          setError(data.error || 'Неправильні дані');
+        } else {
+          setError(data.error || 'Помилка входу');
+        }
         return;
       }
 
-      if (data.session) {
-        console.log('Sign in successful, storing token and calling onAuthSuccess');
-        localStorage.setItem('advent_access_token', data.session.access_token);
+      const data = await response.json();
+      console.log('Sign in successful:', data);
+
+      if (data.access_token) {
+        console.log('Storing token and calling onAuthSuccess');
+        localStorage.setItem('advent_access_token', data.access_token);
         onAuthSuccess();
       } else {
-        console.error('No session in sign in response');
-        setError('Не вдалося створити сесію');
+        console.error('No access token in response');
+        setError('Не вдалося отримати токен авторизації');
       }
     } catch (err) {
-      setError('Помилка входу. Спробуйте ще раз.');
       console.error('Sign in error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Невідома помилка';
+      
+      if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
+        setError('Помилка з\'єднання з сервером. Перевірте інтернет-з\'єднання та спробуйте ще раз.');
+      } else {
+        setError('Помилка входу. Спробуйте ще раз.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -96,27 +120,35 @@ export function AuthPage({ onAuthSuccess, onBackToHome }: AuthPageProps) {
         return;
       }
 
-      // Auto sign in after signup
-      const supabase = createClient();
+      // Auto sign in after signup using backend
+      console.log('Signup successful, attempting auto sign in...');
+      const signInResponse = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-dc8cbf1f/signin`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${publicAnonKey}`,
+          },
+          body: JSON.stringify({ email, password }),
+        }
+      );
 
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (signInError) {
-        setError(signInError.message);
-        console.error('Sign in error:', signInError);
+      if (!signInResponse.ok) {
+        const signInData = await signInResponse.json();
+        setError(signInData.error || 'Помилка автоматичного входу');
         return;
       }
 
-      if (signInData.session) {
+      const signInData = await signInResponse.json();
+
+      if (signInData.access_token) {
         console.log('Sign in successful, storing token and calling onAuthSuccess');
-        localStorage.setItem('advent_access_token', signInData.session.access_token);
+        localStorage.setItem('advent_access_token', signInData.access_token);
         onAuthSuccess();
       } else {
-        console.error('No session in sign in response');
-        setError('Не вдалося створити сесію');
+        console.error('No access token in sign in response');
+        setError('Не вдалося отримати токен авторизації');
       }
     } catch (err) {
       setError('Помилка реєстрації. Спробуйте ще раз.');
@@ -142,7 +174,7 @@ export function AuthPage({ onAuthSuccess, onBackToHome }: AuthPageProps) {
         )}
         
         <CardHeader className="space-y-1 pt-[50px] pr-[24px] pb-[0px] pl-[24px]">
-          <CardTitle className="text-2xl text-center">24 кроки до нового себе</CardTitle>
+          <CardTitle className="text-2xl text-center">24 кроки до нової себе</CardTitle>
           <CardDescription className="text-center">
             Увійдіть або створіть акаунт для участі
           </CardDescription>

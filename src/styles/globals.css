@@ -221,3 +221,22 @@ html {
     box-shadow: inset 0 4px 8px rgba(0, 0, 0, 0.15);
   }
 }
+
+/* Ensure visibility on all devices */
+@layer utilities {
+  #pricing,
+  #about-section,
+  [id*="section"] {
+    visibility: visible !important;
+    opacity: 1 !important;
+    display: block !important;
+  }
+  
+  /* Force visibility for pricing cards on mobile */
+  @media (max-width: 768px) {
+    #pricing > div {
+      opacity: 1 !important;
+      transform: translateX(0) !important;
+    }
+  }
+}

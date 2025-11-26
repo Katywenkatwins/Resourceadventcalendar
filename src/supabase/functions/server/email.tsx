@@ -340,7 +340,7 @@ function getPaymentSuccessEmailTemplate(name: string, tierName: string, amount: 
               <h3>📱 Приєднуйтесь до нашої спільноти!</h3>
               <p>Діліться своїми досягненнями, отримуйте підтримку та натхнення від інших учасників у нашому Telegram-каналі</p>
               <p style="margin-top: 16px;">
-                <a href="https://t.me/+MN8nYh5DYx0xZTYy" class="telegram-button" style="color: white;">
+                <a href="https://t.me/+7dFoolfP03pmZmYy" class="telegram-button" style="color: white;">
                   Приєднатися до Telegram 💬
                 </a>
               </p>

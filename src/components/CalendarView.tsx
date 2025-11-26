@@ -6,8 +6,10 @@ import { Progress } from './ui/progress';
 import { Badge } from './ui/badge';
 import { calendarDays } from '../data/calendarData';
 import { DoorCard } from './DoorCard';
+import { LockedDoorCard } from './LockedDoorCard';
 import { DoorOpeningAnimation } from './DoorOpeningAnimation';
 import { useAuth } from '../App';
+import { CountdownTimer } from './CountdownTimer';
 
 interface CalendarViewProps {
   completedDays: Set<number>;
@@ -22,17 +24,19 @@ interface CalendarViewProps {
   onAdminClick?: () => void;
   isAdmin?: boolean;
   adminUnlockAll?: boolean;
+  unlockedDays?: number[]; // Дні розблоковані адміном вручну
 }
 
 const CANVAS_WIDTH = 5100;
 const CANVAS_HEIGHT = 6540;
 const MOBILE_SCALE = 0.33; // Приблизно втричі менше для мобільних
 
-export function CalendarView({ completedDays, onDayClick, onBackToHome, userProfile, onSignOut, onAdminClick, isAdmin, adminUnlockAll }: CalendarViewProps) {
+export function CalendarView({ completedDays, onDayClick, onBackToHome, userProfile, onSignOut, onAdminClick, isAdmin, adminUnlockAll, unlockedDays }: CalendarViewProps) {
   const [openingDay, setOpeningDay] = useState<number | null>(null);
   const [isPanning, setIsPanning] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [hideCalendar, setHideCalendar] = useState(false);
+  const [cardsToRender, setCardsToRender] = useState(3); // Починаємо з 3 карток на мобільному
   const transformFunctionsRef = useRef<any>(null);
   const mouseDownPos = useRef<{ x: number; y: number; time: number } | null>(null);
   
@@ -44,6 +48,11 @@ export function CalendarView({ completedDays, onDayClick, onBackToHome, userProf
   } catch (e) {
     // Нічого не робимо
   }
+
+  // Debug: Логуємо зміни completedDays
+  useEffect(() => {
+    console.log('🔄 CalendarView: completedDays оновлено:', Array.from(completedDays));
+  }, [completedDays]);
 
   // Визначаємо чи це мобільний пристрій
   useEffect(() => {
@@ -58,19 +67,33 @@ export function CalendarView({ completedDays, onDayClick, onBackToHome, userProf
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Поступовий рендеринг карток для покращення перформансу на мобільних
+  useEffect(() => {
+    if (isMobile && cardsToRender < 24) {
+      const timer = setTimeout(() => {
+        setCardsToRender(prev => Math.min(prev + 6, 24));
+      }, 300); // Збільшено з 150ms до 300ms для плавнішого завантаження
+      return () => clearTimeout(timer);
+    }
+    // На десктопі рендеримо всі картки одразу
+    if (!isMobile && cardsToRender !== 24) {
+      setCardsToRender(24);
+    }
+  }, [isMobile, cardsToRender]);
+
   // Розміри canvas в залежності від пристрою
   const canvasWidth = isMobile ? CANVAS_WIDTH * MOBILE_SCALE - 80 : CANVAS_WIDTH - 300;
-  // Додаємо більше висоти для мобільного, щоб можна було прокрутити до нижніх дверцят
-  const canvasHeight = isMobile ? CANVAS_HEIGHT * MOBILE_SCALE + 650 : CANVAS_HEIGHT + 830;
+  // Оптимізовано для мобільного - менша висота для швидшого рендерингу
+  const canvasHeight = isMobile ? CANVAS_HEIGHT * MOBILE_SCALE + 1200 : CANVAS_HEIGHT + 1100; // Збільшено висоту щоб не перекривались картки внизу
   const cardScale = isMobile ? MOBILE_SCALE : 1;
 
   const today = new Date();
   const currentDay = today.getDate();
   const currentMonth = today.getMonth();
   
-  // ТЕСТОВА ДАТА СТАРТУ: 15 листопада
-  const CALENDAR_START_DATE = 15;
-  const CALENDAR_START_MONTH = 10; // листопад (0-indexed)
+  // ДАТА СТАРТУ: 1 грудня 2025 (як в адмін-панелі)
+  const CALENDAR_START_DATE = 1;
+  const CALENDAR_START_MONTH = 11; // грудень (0-indexed)
   
   // Визначаємо яка зараз дата відносно старту календаря
   const calendarStartDate = new Date(today.getFullYear(), CALENDAR_START_MONTH, CALENDAR_START_DATE);
@@ -79,28 +102,31 @@ export function CalendarView({ completedDays, onDayClick, onBackToHome, userProf
 
   const isDayUnlocked = (day: number) => {
     try {
-      // Якщо адмін розблокував всі дні - дозволяємо все
+      // Якщо адмін розблокував всі дні - дозволяємо все (тестовий режим)
       if (isAdmin && adminUnlockAll) {
+        console.log(`🔓 День ${day}: Розблоковано адміном (тестовий режим)`);
         return true;
       }
       
-      // Якщо календар ще не почався (до 15 листопада) - все закрито
-      if (daysPassed < 1) {
+      // Перевіряємо чи день вже "настав" згідно з налаштуваннями адміна
+      const dayHasArrived = unlockedDays && unlockedDays.includes(day);
+      
+      if (!dayHasArrived) {
+        console.log(`🔒 День ${day}: Ще не настав згідно з налаштуваннями адміна. UnlockedDays:`, unlockedDays);
         return false;
       }
       
-      // День 1 завжди відкритий коли календар почався
+      // День настав, але користувач має пройти дні ПОСЛІДОВНО
+      
+      // День 1 завжди відкритий коли він настав
       if (day === 1) {
+        console.log(`🔓 День ${day}: Перший день (настав і завжди доступний)`);
         return true;
       }
       
-      // Перевіряємо чи день вже настав (чи пройшло достатньо днів з початку)
-      if (day > daysPassed) {
-        return false;
-      }
-      
-      // Інші дні відкриваються після виконання попереднього
+      // Інші дні відкриваються ТІЛЬКИ після виконання попереднього
       const prevCompleted = completedDays.has(day - 1);
+      console.log(`${prevCompleted ? '🔓' : '🔒'} День ${day}: День настав, але попередній день ${day - 1} ${prevCompleted ? 'виконано ✅' : 'НЕ виконано ❌'}. Completed days:`, Array.from(completedDays));
       return prevCompleted;
     } catch (error) {
       console.error('Error in isDayUnlocked:', error);
@@ -186,7 +212,7 @@ export function CalendarView({ completedDays, onDayClick, onBackToHome, userProf
     switch (tier) {
       case 'basic': return 'Світло';
       case 'deep': return 'Магія';
-      case 'premium': return 'Чудо';
+      case 'premium': return 'Диво';
       default: return tier;
     }
   };
@@ -204,7 +230,7 @@ export function CalendarView({ completedDays, onDayClick, onBackToHome, userProf
       >
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
               <Button
                 variant="ghost"
                 onClick={onBackToHome}
@@ -214,6 +240,11 @@ export function CalendarView({ completedDays, onDayClick, onBackToHome, userProf
                 <ChevronLeft className="w-5 h-5 mr-2" />
                 На головну
               </Button>
+              
+              {/* Countdown Timer */}
+              <div className="hidden lg:block">
+                <CountdownTimer compact />
+              </div>
               
               {userProfile && (
                 <div className="hidden md:flex items-center gap-2">
@@ -279,13 +310,19 @@ export function CalendarView({ completedDays, onDayClick, onBackToHome, userProf
               )}
             </div>
           </div>
+          
+          {/* Mobile Countdown Timer - Visible only on mobile */}
+          <div className="lg:hidden border-t px-4 py-2" style={{ borderColor: '#05231120' }}>
+            <CountdownTimer compact />
+          </div>
         </div>
       </div>
 
       {/* Zoom Controls - Fixed */}
       <div 
-        className="absolute top-20 right-4 z-40 transition-opacity duration-300"
+        className="absolute right-4 z-40 transition-opacity duration-300"
         style={{
+          top: isMobile ? '120px' : '80px', // Налаштування для мобільного header з лічільником
           opacity: hideCalendar ? 0 : 1,
           pointerEvents: hideCalendar ? 'none' : 'auto'
         }}
@@ -320,8 +357,9 @@ export function CalendarView({ completedDays, onDayClick, onBackToHome, userProf
 
       {/* Calendar Canvas - Full viewport */}
       <div 
-        className="absolute inset-0 w-screen h-screen pt-[60px] transition-opacity duration-300"
+        className="absolute inset-0 w-screen h-screen pt-[60px] lg:pt-[60px] transition-opacity duration-300"
         style={{
+          paddingTop: isMobile ? '110px' : '60px', // Більше місця для мобільного header з лічільником
           opacity: hideCalendar ? 0 : 1,
           pointerEvents: hideCalendar ? 'none' : 'auto'
         }}
@@ -367,6 +405,10 @@ export function CalendarView({ completedDays, onDayClick, onBackToHome, userProf
                   height: '100vh',
                   cursor: isPanning ? 'grabbing' : 'grab'
                 }}
+                contentStyle={{
+                  willChange: 'transform',
+                  transform: 'translateZ(0)' // GPU acceleration
+                }}
               >
                 {/* Canvas with all cards */}
                 <div 
@@ -377,7 +419,9 @@ export function CalendarView({ completedDays, onDayClick, onBackToHome, userProf
                   }}
                   onMouseDown={handleMouseDown}
                 >
-                  {calendarDays.map((day) => {
+                  {calendarDays
+                    .slice(0, cardsToRender) // Рендеримо тільки потрібну кількість карток
+                    .map((day) => {
                     const isUnlocked = isDayUnlocked(day.day);
                     const isCompleted = completedDays.has(day.day);
                     const isToday = daysPassed === day.day; // Сьогоднішній день календаря
@@ -398,17 +442,34 @@ export function CalendarView({ completedDays, onDayClick, onBackToHome, userProf
                         }}
                       >
                         <div style={{ transform: `scale(${cardScale})`, transformOrigin: 'top left' }}>
-                          <DoorCard
-                            day={day}
-                            isUnlocked={isUnlocked}
-                            isCompleted={isCompleted}
-                            isToday={isToday}
-                            onClick={(e) => handleDoorClick(day.day, e)}
-                          />
+                          {isUnlocked ? (
+                            <DoorCard
+                              day={day}
+                              isUnlocked={isUnlocked}
+                              isCompleted={isCompleted}
+                              isToday={isToday}
+                              onClick={(e) => handleDoorClick(day.day, e)}
+                            />
+                          ) : (
+                            <LockedDoorCard day={day} />
+                          )}
                         </div>
                       </div>
                     );
                   })}
+                  
+                  {/* Loading індикатор для карток що завантажуються */}
+                  {isMobile && cardsToRender < 24 && (
+                    <div 
+                      className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-50 bg-white/90 px-4 py-2 rounded-full shadow-lg"
+                      style={{ color: '#052311' }}
+                    >
+                      <div className="flex items-center gap-2 text-sm">
+                        <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#CE2E2E', borderTopColor: 'transparent' }} />
+                        Завантаження {cardsToRender}/24
+                      </div>
+                    </div>
+                  )}
                 </div>
               </TransformComponent>
             );

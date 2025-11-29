@@ -57,6 +57,9 @@ export function ExpertEditor({ expert, onChange }: ExpertEditorProps) {
           onChange={(e) => onChange({ ...expert, photoUrl: e.target.value })}
           className="mt-1"
         />
+        <p className="text-xs mt-1 text-gray-500">
+          💡 Підтримується GitHub: використовуйте blob URL (автоматично конвертується в raw)
+        </p>
       </div>
 
       <div className="pt-4 border-t" style={{ borderColor: '#2d5a3d20' }}>

@@ -29,6 +29,14 @@ interface DayContentProps {
   userTier?: 'basic' | 'deep' | 'premium';
 }
 
+// Конвертуємо GitHub blob URL в raw URL для прямого завантаження зображень
+const convertGitHubUrl = (url: string) => {
+  if (url.includes('github.com') && url.includes('/blob/')) {
+    return url.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
+  }
+  return url;
+};
+
 export function DayContent({ day, isCompleted, onComplete, onBack, totalCompleted, userTier }: DayContentProps) {
   const [showVideo, setShowVideo] = useState(false);
   const [dynamicContent, setDynamicContent] = useState<TierContent | null>(null);
@@ -47,121 +55,196 @@ export function DayContent({ day, isCompleted, onComplete, onBack, totalComplete
     setIsGeneratingPdf(true);
     
     try {
-      console.log('Starting PDF generation...');
+      console.log('Starting visual PDF generation with html2canvas...');
       
-      // Знаходимо контейнер з контентом дня
-      const contentElement = document.querySelector('.day-content-container');
-      
-      if (!contentElement) {
-        console.error('Content container not found');
-        alert('Помилка: не вдалося знайти контент для генерації PDF');
-        setIsGeneratingPdf(false);
-        return;
-      }
-
-      console.log('Content element found, creating canvas...');
-
-      // Створюємо canvas з HTML контенту
-      const canvas = await html2canvas(contentElement as HTMLElement, {
-        scale: 1.5,
-        useCORS: true,
-        allowTaint: false,
-        backgroundColor: '#e8e4e1',
-        logging: false,
-        ignoreElements: (element) => {
-          // Ігноруємо елементи, які можуть спричинити проблеми
-          return element.classList?.contains('no-pdf') || false;
-        },
-        onclone: (clonedDoc) => {
-          // Замінюємо всі сучасні CSS кольори на звичайні hex/rgb
-          const allElements = clonedDoc.querySelectorAll('*');
-          allElements.forEach((el) => {
-            const htmlEl = el as HTMLElement;
-            const computedStyle = window.getComputedStyle(htmlEl);
-            
-            // Функція для перевірки та заміни кольорів
-            const replaceModernColor = (colorValue: string, fallbackColor: string): string => {
-              if (colorValue && (
-                colorValue.includes('oklch') || 
-                colorValue.includes('oklab') || 
-                colorValue.includes('lab(') || 
-                colorValue.includes('lch(')
-              )) {
-                return fallbackColor;
-              }
-              return colorValue;
-            };
-            
-            // Конвертуємо всі кольори в rgb/hex формат
-            if (computedStyle.color) {
-              htmlEl.style.color = replaceModernColor(computedStyle.color, 'rgb(30, 58, 95)');
-            }
-            if (computedStyle.backgroundColor) {
-              htmlEl.style.backgroundColor = replaceModernColor(computedStyle.backgroundColor, 'rgb(232, 228, 225)');
-            }
-            if (computedStyle.borderColor) {
-              htmlEl.style.borderColor = replaceModernColor(computedStyle.borderColor, 'rgb(45, 90, 61)');
-            }
-            if (computedStyle.borderTopColor) {
-              htmlEl.style.borderTopColor = replaceModernColor(computedStyle.borderTopColor, 'rgb(45, 90, 61)');
-            }
-            if (computedStyle.borderRightColor) {
-              htmlEl.style.borderRightColor = replaceModernColor(computedStyle.borderRightColor, 'rgb(45, 90, 61)');
-            }
-            if (computedStyle.borderBottomColor) {
-              htmlEl.style.borderBottomColor = replaceModernColor(computedStyle.borderBottomColor, 'rgb(45, 90, 61)');
-            }
-            if (computedStyle.borderLeftColor) {
-              htmlEl.style.borderLeftColor = replaceModernColor(computedStyle.borderLeftColor, 'rgb(45, 90, 61)');
-            }
-            if (computedStyle.outlineColor) {
-              htmlEl.style.outlineColor = replaceModernColor(computedStyle.outlineColor, 'rgb(45, 90, 61)');
-            }
-            
-            // Обробка box-shadow та text-shadow
-            if (computedStyle.boxShadow && computedStyle.boxShadow !== 'none') {
-              htmlEl.style.boxShadow = computedStyle.boxShadow.replace(/oklch\([^)]+\)|oklab\([^)]+\)|lab\([^)]+\)|lch\([^)]+\)/g, 'rgba(0,0,0,0.1)');
-            }
-            if (computedStyle.textShadow && computedStyle.textShadow !== 'none') {
-              htmlEl.style.textShadow = computedStyle.textShadow.replace(/oklch\([^)]+\)|oklab\([^)]+\)|lab\([^)]+\)|lch\([^)]+\)/g, 'rgba(0,0,0,0.1)');
-            }
-          });
-        },
-      });
-
-      console.log('Canvas created, generating PDF...');
-
-      // Створюємо PDF документ
-      const imgData = canvas.toDataURL('image/jpeg', 0.95); // Використовуємо JPEG для меншого розміру
+      // Створюємо PDF документ A4
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
         format: 'a4',
       });
 
-      const pdfWidth = 210; // A4 width in mm
-      const pdfHeight = 297; // A4 height in mm
-      const canvasWidth = canvas.width;
-      const canvasHeight = canvas.height;
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 15;
+
+      // ======= ТИТУЛЬНА СТОРІНКА =======
+      // Створюємо градієнт фон
+      const gradientSteps = 50;
+      const colorStart = { r: 45, g: 90, b: 61 }; // #2d5a3d
+      const colorEnd = { r: 206, g: 46, b: 46 }; // #CE2E2E
+      
+      for (let i = 0; i < gradientSteps; i++) {
+        const ratio = i / gradientSteps;
+        const r = Math.round(colorStart.r + (colorEnd.r - colorStart.r) * ratio);
+        const g = Math.round(colorStart.g + (colorEnd.g - colorStart.g) * ratio);
+        const b = Math.round(colorStart.b + (colorEnd.b - colorStart.b) * ratio);
+        
+        pdf.setFillColor(r, g, b);
+        const rectHeight = pageHeight / gradientSteps;
+        pdf.rect(0, i * rectHeight, pageWidth, rectHeight, 'F');
+      }
+      
+      // Додаємо напівпрозорий білий оверлей для кращої читабельності
+      pdf.setFillColor(255, 255, 255);
+      pdf.setGState(new pdf.GState({ opacity: 0.15 }));
+      pdf.rect(0, 0, pageWidth, pageHeight, 'F');
+      pdf.setGState(new pdf.GState({ opacity: 1 }));
+      
+      // Заголовок
+      pdf.setFontSize(32);
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFont('helvetica', 'bold');
+      const titleText = '24 кроки до нового себе';
+      pdf.text(titleText, pageWidth / 2, 80, { align: 'center' });
+      
+      // День
+      pdf.setFontSize(48);
+      pdf.text(`День ${day}`, pageWidth / 2, 110, { align: 'center' });
+      
+      // Назва дня
+      const title = dynamicTheme?.title || content.title;
+      pdf.setFontSize(22);
+      const titleLines = pdf.splitTextToSize(title, pageWidth - 40);
+      let titleY = 140;
+      titleLines.forEach((line: string) => {
+        pdf.text(line, pageWidth / 2, titleY, { align: 'center' });
+        titleY += 10;
+      });
+      
+      // Підзаголовок
+      const subtitle = dynamicTheme?.subtitle || content.subtitle;
+      if (subtitle) {
+        pdf.setFontSize(16);
+        const subtitleLines = pdf.splitTextToSize(subtitle, pageWidth - 40);
+        let subtitleY = titleY + 15;
+        subtitleLines.forEach((line: string) => {
+          pdf.text(line, pageWidth / 2, subtitleY, { align: 'center' });
+          subtitleY += 8;
+        });
+      }
+      
+      // Футер титульної сторінки
+      pdf.setFontSize(12);
+      pdf.text(`Дата створення: ${new Date().toLocaleDateString('uk-UA')}`, pageWidth / 2, pageHeight - 20, { align: 'center' });
+      
+      // ======= СТОРІНКИ КОНТЕНТУ =======
+      // Знаходимо контейнер з контентом для захоплення
+      const originalContainer = document.querySelector('.day-content-container') as HTMLElement;
+      
+      if (!originalContainer) {
+        throw new Error('Контент не знайдено');
+      }
+      
+      // Створюємо клон контейнера, щоб не чіпати оригінальний DOM
+      const clonedContainer = originalContainer.cloneNode(true) as HTMLElement;
+      
+      // Додаємо клон в body, але поза екраном
+      clonedContainer.style.position = 'absolute';
+      clonedContainer.style.left = '-9999px';
+      clonedContainer.style.top = '0';
+      clonedContainer.style.width = `${originalContainer.offsetWidth}px`;
+      document.body.appendChild(clonedContainer);
+      
+      let canvas: HTMLCanvasElement;
+      
+      try {
+        // Функція для конвертації oklch/oklab в hex
+        const convertColorToHex = (colorStr: string): string => {
+          if (!colorStr || colorStr === 'transparent') return colorStr;
+          
+          // Якщо це oklch або oklab - замінюємо на безпечні кольори
+          if (colorStr.includes('oklch') || colorStr.includes('oklab')) {
+            // Визначаємо по контексту який колір потрібен
+            if (colorStr.includes('0.95') || colorStr.includes('0.9')) {
+              return '#ffffff'; // світлі кольори
+            } else if (colorStr.includes('0.2') || colorStr.includes('0.3')) {
+              return '#2d5a3d'; // темні зелені
+            } else if (colorStr.includes('0.4') || colorStr.includes('0.5')) {
+              return '#1e3a5f'; // темно-сині
+            }
+            return '#e8e4e1'; // дефолтний бежевий
+          }
+          
+          // Якщо це вже hex, rgb, або інший підтримуваний формат - залишаємо як є
+          return colorStr;
+        };
+        
+        // Рекурсивно копіюємо computed styles як inline styles
+        const copyComputedStylesToInline = (element: HTMLElement) => {
+          const computedStyle = window.getComputedStyle(element);
+          
+          // Копіюємо тільки важливі стилі, замінюючи oklch на безпечні кольори
+          const importantStyles = [
+            'color',
+            'backgroundColor', 
+            'borderColor',
+            'borderTopColor',
+            'borderRightColor',
+            'borderBottomColor',
+            'borderLeftColor',
+            'outlineColor',
+            'fill',
+            'stroke'
+          ];
+          
+          importantStyles.forEach(prop => {
+            const value = computedStyle.getPropertyValue(prop);
+            if (value) {
+              const convertedValue = convertColorToHex(value);
+              element.style.setProperty(prop, convertedValue, 'important');
+            }
+          });
+          
+          // Рекурсивно обробляємо дочірні елементи
+          Array.from(element.children).forEach(child => {
+            copyComputedStylesToInline(child as HTMLElement);
+          });
+        };
+        
+        copyComputedStylesToInline(clonedContainer);
+        
+        // Видаляємо iframe та video з клону
+        clonedContainer.querySelectorAll('iframe, video').forEach(el => el.remove());
+        
+        // Захоплюємо клон як зображення
+        canvas = await html2canvas(clonedContainer, {
+          scale: 2, // Висока якість
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#f5f1ee',
+          windowWidth: clonedContainer.scrollWidth,
+          windowHeight: clonedContainer.scrollHeight,
+        });
+      } finally {
+        // Завжди видаляємо клон з DOM, навіть якщо виникла помилка
+        if (document.body.contains(clonedContainer)) {
+          document.body.removeChild(clonedContainer);
+        }
+      }
+      
+      const imgData = canvas.toDataURL('image/jpeg', 0.9);
       
       // Розраховуємо розміри для PDF
-      const ratio = canvasWidth / canvasHeight;
-      let imgWidth = pdfWidth - 20; // margins
-      let imgHeight = imgWidth / ratio;
+      const imgWidth = pageWidth - (margin * 2);
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
       
+      // Розбиваємо на сторінки
+      const pageContentHeight = pageHeight - (margin * 2);
       let heightLeft = imgHeight;
-      let position = 10; // top margin
-
-      // Додаємо першу сторінку
-      pdf.addImage(imgData, 'JPEG', 10, position, imgWidth, imgHeight);
-      heightLeft -= (pdfHeight - 20);
-
-      // Якщо контент не вміщується на одну сторінку - додаємо наступні
+      let position = 0;
+      
+      // Додаємо першу сторінку контенту
+      pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', margin, margin, imgWidth, imgHeight, undefined, 'FAST');
+      heightLeft -= pageContentHeight;
+      
+      // Додаємо наступні сторінки, якщо контент не вміщується
       while (heightLeft > 0) {
-        position = heightLeft - imgHeight + 10; // add margin
+        position = heightLeft - imgHeight;
         pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', 10, position, imgWidth, imgHeight);
-        heightLeft -= pdfHeight;
+        pdf.addImage(imgData, 'JPEG', margin, position + margin, imgWidth, imgHeight, undefined, 'FAST');
+        heightLeft -= pageContentHeight;
       }
 
       // Створюємо безпечну назву файлу (видаляємо спеціальні символи)
@@ -172,10 +255,10 @@ export function DayContent({ day, isCompleted, onComplete, onBack, totalComplete
       
       const fileName = `День_${day}_${safeTitle}.pdf`;
       
-      console.log('Saving PDF:', fileName);
+      console.log('Saving visual PDF:', fileName);
       pdf.save(fileName);
       
-      console.log('PDF generated successfully');
+      console.log('Visual PDF generated successfully');
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert(`Помилка при генерації PDF: ${error instanceof Error ? error.message : 'Невідома помилка'}`);
@@ -276,8 +359,13 @@ export function DayContent({ day, isCompleted, onComplete, onBack, totalComplete
           const data = await response.json();
           console.log('Loaded dynamic expert for day', day, ':', data);
           if (data.expert) {
+            console.log('Expert photo URL:', data.expert.photoUrl);
+            console.log('Expert social:', data.expert.social);
+            console.log('Expert Instagram:', data.expert.social?.instagram);
             setDynamicExpert(data.expert);
           }
+        } else {
+          console.error('Failed to load expert, status:', response.status);
         }
       } catch (error) {
         console.error('Error loading dynamic expert:', error);
@@ -299,6 +387,9 @@ export function DayContent({ day, isCompleted, onComplete, onBack, totalComplete
           const data = await response.json();
           console.log('Loaded dynamic theme for day', day, ':', data);
           if (data.theme) {
+            console.log('Theme videoUrl:', data.theme.videoUrl);
+            console.log('Theme videoThumbnail:', data.theme.videoThumbnail);
+            console.log('Theme bonus:', data.theme.bonus);
             setDynamicTheme(data.theme);
           }
         }
@@ -323,7 +414,17 @@ export function DayContent({ day, isCompleted, onComplete, onBack, totalComplete
     return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
   };
 
-  const embedUrl = getYouTubeEmbedUrl(content.videoUrl);
+  const embedUrl = getYouTubeEmbedUrl(dynamicTheme?.videoUrl || content.videoUrl);
+  
+  // Конвертуємо обкладинку з GitHub blob в raw URL якщо потрібно
+  const thumbnailUrl = convertGitHubUrl(dynamicTheme?.videoThumbnail || content.videoThumbnail || videoThumbnail);
+  
+  // Логування для діагностики відео
+  console.log('Video URL source:', dynamicTheme?.videoUrl ? 'dynamic' : 'static');
+  console.log('Video URL:', dynamicTheme?.videoUrl || content.videoUrl);
+  console.log('Embed URL:', embedUrl);
+  console.log('Video thumbnail (original):', dynamicTheme?.videoThumbnail || content.videoThumbnail);
+  console.log('Video thumbnail (converted):', thumbnailUrl);
 
   // Check for special badges
   const badges = []
@@ -643,29 +744,28 @@ export function DayContent({ day, isCompleted, onComplete, onBack, totalComplete
               <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl break-words" style={{ color: '#2d5a3d', fontFamily: "'Dela Gothic One', sans-serif" }}>Вступ експерта</h2>
             </div>
 
-            {!showVideo ? (
-              <button
-                onClick={() => setShowVideo(true)}
-                className="relative w-full aspect-video rounded-2xl overflow-hidden group cursor-pointer border-2"
-                style={{ 
-                  borderColor: '#2d5a3d30',
-                  backgroundImage: `url(${videoThumbnail})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center'
-                }}
-              >
-                <div className="absolute inset-0 group-hover:bg-black/10 transition-colors"></div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full bg-white/90 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-xl">
-                    <Play className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 ml-1" style={{ color: '#2d5a3d' }} />
+            <div className="relative w-full aspect-video">
+              {!showVideo ? (
+                <button
+                  onClick={() => setShowVideo(true)}
+                  className="absolute inset-0 w-full h-full rounded-2xl overflow-hidden group cursor-pointer border-2 z-10"
+                  style={{ 
+                    borderColor: '#2d5a3d30',
+                    backgroundImage: `url(${thumbnailUrl})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center'
+                  }}
+                >
+                  <div className="absolute inset-0 group-hover:bg-black/10 transition-colors"></div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full bg-white/90 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-xl">
+                      <Play className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 ml-1" style={{ color: '#2d5a3d' }} />
+                    </div>
                   </div>
-                </div>
-                <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 md:p-6">
-                  <p className="text-white text-sm sm:text-base md:text-lg break-words drop-shadow-lg" style={{ fontFamily: 'Arial, sans-serif', textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>Відео від {content.expert}</p>
-                </div>
-              </button>
-            ) : (
-              <div className="aspect-video rounded-2xl overflow-hidden bg-black" style={{ borderColor: '#2d5a3d30' }}>
+                </button>
+              ) : null}
+              
+              <div className="w-full h-full rounded-2xl overflow-hidden bg-black border-2" style={{ borderColor: '#2d5a3d30' }}>
                 {embedUrl ? (
                   <iframe
                     className="w-full h-full"
@@ -680,10 +780,10 @@ export function DayContent({ day, isCompleted, onComplete, onBack, totalComplete
                   </div>
                 )}
               </div>
-            )}
+            </div>
 
             <p className="mt-3 sm:mt-4 text-sm sm:text-base md:text-lg break-words" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>
-              Сьогодні ти {content.description.toLowerCase()}
+              {content.description.toLowerCase()}
             </p>
           </div>
 
@@ -719,39 +819,30 @@ export function DayContent({ day, isCompleted, onComplete, onBack, totalComplete
                 </div>
               );
             })()}
-
-            <div className="flex gap-3 sm:gap-4 mt-6 sm:mt-8 flex-wrap">
-              {(userTier === 'deep' || userTier === 'premium') && (
-                <Button
-                  variant="outline"
-                  className="border-2 hover:bg-[#2d5a3d]/10 text-xs sm:text-sm md:text-base px-3 sm:px-4 py-2 break-words"
-                  style={{ borderColor: '#2d5a3d', color: '#2d5a3d', fontFamily: 'Arial, sans-serif' }}
-                  onClick={handleDownloadPdf}
-                  disabled={isGeneratingPdf}
-                >
-                  <Download className="w-3 h-3 sm:w-4 sm:h-4 mr-2 flex-shrink-0" />
-                  <span>{isGeneratingPdf ? 'Генерація PDF...' : 'Завантажити PDF'}</span>
-                </Button>
-              )}
-            </div>
           </div>
 
           {/* Expert Section */}
           <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-4 sm:p-6 md:p-8 shadow-xl border-2 mb-6 sm:mb-8" style={{ borderColor: 'rgba(45,90,61,0.13)' }}>
             <h3 className="text-lg sm:text-xl md:text-2xl lg:text-3xl mb-4 sm:mb-6 break-words" style={{ color: '#2d5a3d', fontFamily: "'Dela Gothic One', sans-serif" }}>Експерт дня {day}</h3>
             <div className="flex items-start gap-4 sm:gap-6 flex-col sm:flex-row">
-              {(dynamicExpert?.photoUrl || day === 1) ? (
-                <ImageWithFallback
-                  src={dynamicExpert?.photoUrl || expertPhoto} 
-                  alt={dynamicExpert?.name || content.expert}
-                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover flex-shrink-0 border-2"
-                  style={{ borderColor: '#2d5a3d' }}
-                />
-              ) : (
-                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center text-white text-2xl sm:text-3xl flex-shrink-0" style={{ backgroundColor: '#2d5a3d' }}>
-                  {(dynamicExpert?.name || content.expert).charAt(0)}
-                </div>
-              )}
+              {(() => {
+                const photoUrl = dynamicExpert?.photoUrl ? convertGitHubUrl(dynamicExpert.photoUrl) : null;
+                console.log('Original photoUrl:', dynamicExpert?.photoUrl);
+                console.log('Converted photoUrl:', photoUrl);
+                
+                return photoUrl ? (
+                  <ImageWithFallback
+                    src={photoUrl} 
+                    alt={dynamicExpert?.name || content.expert}
+                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover flex-shrink-0 border-2"
+                    style={{ borderColor: '#2d5a3d' }}
+                  />
+                ) : (
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center text-white text-2xl sm:text-3xl flex-shrink-0" style={{ backgroundColor: '#2d5a3d' }}>
+                    {(dynamicExpert?.name || content.expert).charAt(0)}
+                  </div>
+                );
+              })()}
               
               <div className="flex-1 min-w-0">
                 <h3 className="text-base sm:text-lg md:text-xl lg:text-2xl mb-2 break-words" style={{ color: '#2d5a3d', fontFamily: 'Arial, sans-serif' }}>{dynamicExpert?.name || content.expert}</h3>
@@ -769,9 +860,9 @@ export function DayContent({ day, isCompleted, onComplete, onBack, totalComplete
                 </p>
                 
                 <div className="space-y-2 sm:space-y-3">
-                  {(dynamicExpert?.instagram || content.expertSocial?.instagram) && (
+                  {(dynamicExpert?.social?.instagram || content.expertSocial?.instagram) && (
                     <a 
-                      href={dynamicExpert?.instagram || content.expertSocial?.instagram} 
+                      href={dynamicExpert?.social?.instagram || content.expertSocial?.instagram} 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="flex items-center gap-2 text-xs sm:text-sm md:text-base hover:underline break-all" 
@@ -782,9 +873,9 @@ export function DayContent({ day, isCompleted, onComplete, onBack, totalComplete
                     </a>
                   )}
                   
-                  {(dynamicExpert?.telegram || content.expertSocial?.telegram) && (
+                  {(dynamicExpert?.social?.telegram || content.expertSocial?.telegram) && (
                     <a 
-                      href={dynamicExpert?.telegram || content.expertSocial?.telegram} 
+                      href={dynamicExpert?.social?.telegram || content.expertSocial?.telegram} 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="flex items-center gap-2 text-xs sm:text-sm md:text-base hover:underline break-all" 
@@ -795,9 +886,9 @@ export function DayContent({ day, isCompleted, onComplete, onBack, totalComplete
                     </a>
                   )}
                   
-                  {(dynamicExpert?.website || content.expertSocial?.website) && (
+                  {(dynamicExpert?.social?.website || content.expertSocial?.website) && (
                     <a 
-                      href={dynamicExpert?.website || content.expertSocial?.website} 
+                      href={dynamicExpert?.social?.website || content.expertSocial?.website} 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="flex items-center gap-2 text-xs sm:text-sm md:text-base hover:underline break-all" 
@@ -810,10 +901,10 @@ export function DayContent({ day, isCompleted, onComplete, onBack, totalComplete
                 </div>
                 
                 {/* Бонус від експерта - завжди видимий якщо є */}
-                {((dynamicExpert?.bonus && dynamicExpert.bonus.trim()) || (content.bonus && content.bonus.trim())) && (
+                {((dynamicTheme?.bonus && dynamicTheme.bonus.trim()) || (content.bonus && content.bonus.trim())) && (
                   <div className="rounded-xl p-3 sm:p-4 border-2 mt-3 sm:mt-4" style={{ backgroundColor: 'rgba(45,90,61,0.1)', borderColor: 'rgba(45,90,61,0.13)' }}>
                     <p className="text-xs sm:text-sm md:text-base whitespace-pre-line break-words" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>
-                      {dynamicExpert?.bonus || content.bonus}
+                      {dynamicTheme?.bonus || content.bonus}
                     </p>
                   </div>
                 )}

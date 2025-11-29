@@ -124,7 +124,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
 
         setUserProfile(profile);
-        setIsAdmin(profile.email?.toLowerCase() === 'katywenka@gmail.com');
+        
+        // Перевірка чи користувач є адміном
+        const adminEmails = ['katywenka@gmail.com', 'katywenkatwins@gmail.com', 'smiiankate@gmail.com'];
+        const userEmail = profile.email?.toLowerCase().trim();
+        setIsAdmin(adminEmails.includes(userEmail || ''));
+        
         setCompletedDays(new Set(profile.progress || []));
         setIsLoading(false);
         

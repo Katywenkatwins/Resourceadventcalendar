@@ -101,10 +101,17 @@ app.get('/day/:day/expert', async (c) => {
     const expertData = await kv.get(`day-expert-${dayNumber}`);
     
     if (!expertData) {
+      console.log('No expert data found for day', dayNumber);
       return c.json({ expert: null });
     }
 
-    return c.json({ expert: JSON.parse(expertData as string) });
+    const parsedExpert = JSON.parse(expertData as string);
+    console.log('Retrieved expert data for day', dayNumber, ':', parsedExpert);
+    console.log('Expert photoUrl:', parsedExpert.photoUrl);
+    console.log('Expert social:', parsedExpert.social);
+    console.log('Expert Instagram:', parsedExpert.social?.instagram);
+
+    return c.json({ expert: parsedExpert });
   } catch (error) {
     console.error('Error fetching expert data:', error);
     return c.json({ error: 'Failed to fetch expert data' }, 500);
@@ -122,11 +129,17 @@ app.post('/day/:day/expert', async (c) => {
     }
 
     const body = await c.req.json();
+    console.log('Received expert body:', body);
     const { expert } = body;
 
     if (!expert) {
       return c.json({ error: 'Expert data is required' }, 400);
     }
+
+    console.log('Saving expert data for day', dayNumber, ':', expert);
+    console.log('Expert photoUrl:', expert.photoUrl);
+    console.log('Expert social:', expert.social);
+    console.log('Expert Instagram:', expert.social?.instagram);
 
     // Зберігаємо дані експерта в KV store
     await kv.set(`day-expert-${dayNumber}`, JSON.stringify(expert));
@@ -153,10 +166,17 @@ app.get('/day/:day/theme', async (c) => {
     const themeData = await kv.get(`day-theme-${dayNumber}`);
     
     if (!themeData) {
+      console.log('No theme data found for day', dayNumber);
       return c.json({ theme: null });
     }
 
-    return c.json({ theme: JSON.parse(themeData as string) });
+    const parsedTheme = JSON.parse(themeData as string);
+    console.log('Retrieved theme data for day', dayNumber, ':', parsedTheme);
+    console.log('Theme videoUrl:', parsedTheme.videoUrl);
+    console.log('Theme videoThumbnail:', parsedTheme.videoThumbnail);
+    console.log('Theme bonus:', parsedTheme.bonus);
+
+    return c.json({ theme: parsedTheme });
   } catch (error) {
     console.error('Error fetching theme data:', error);
     return c.json({ error: 'Failed to fetch theme data' }, 500);
@@ -174,11 +194,17 @@ app.post('/day/:day/theme', async (c) => {
     }
 
     const body = await c.req.json();
+    console.log('Received theme body:', body);
     const { theme } = body;
 
     if (!theme) {
       return c.json({ error: 'Theme data is required' }, 400);
     }
+
+    console.log('Saving theme data for day', dayNumber, ':', theme);
+    console.log('Theme videoUrl:', theme.videoUrl);
+    console.log('Theme videoThumbnail:', theme.videoThumbnail);
+    console.log('Theme bonus:', theme.bonus);
 
     // Зберігаємо дані теми в KV store
     await kv.set(`day-theme-${dayNumber}`, JSON.stringify(theme));

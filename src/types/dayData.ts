@@ -18,6 +18,7 @@ export interface ThemeData {
   description: string;
   theme: string; // Badge - тема (наприклад, "Тіло", "Емоції")
   videoUrl?: string;
+  videoThumbnail?: string; // Обкладинка відео
   bonus?: string;
 }
 

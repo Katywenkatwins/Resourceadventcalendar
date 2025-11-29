@@ -721,7 +721,7 @@ function Text9() {
   return (
     <div className="h-[28px] relative shrink-0 w-[153.648px]" data-name="Text">
       <div className="bg-clip-padding border-0 border-[transparent] border-solid box-border h-[28px] relative w-[153.648px]">
-        <p className="absolute font-['Arial:Regular',sans-serif] leading-[28px] left-0 not-italic text-[#1e3a5f] text-[18px] text-nowrap top-[-1px] whitespace-pre">Відпустити минуле</p>
+        <p className="absolute font-['Arial:Regular',sans-serif] leading-[28px] left-0 not-italic text-[#1e3a5f] text-[18px] text-nowrap top-[-1px] whitespace-pre">Прийняття і вдячність</p>
       </div>
     </div>
   );

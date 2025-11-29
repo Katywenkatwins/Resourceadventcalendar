@@ -2,10 +2,19 @@ import { ContentBlock } from '../types/contentBlocks';
 import { Button } from './ui/button';
 import { ExternalLink, Download, Play } from 'lucide-react';
 import { useState } from 'react';
+import { ImageWithFallback } from './figma/ImageWithFallback';
 
 interface ContentBlockRendererProps {
   blocks: ContentBlock[];
 }
+
+// Функція для конвертації GitHub blob URL в raw URL для прямого завантаження зображень
+const convertGitHubUrl = (url: string) => {
+  if (url.includes('github.com') && url.includes('/blob/')) {
+    return url.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
+  }
+  return url;
+};
 
 // Функція для конвертації YouTube URL в embed URL
 const getYouTubeEmbedUrl = (url: string) => {
@@ -145,8 +154,8 @@ export function ContentBlockRenderer({ blocks }: ContentBlockRendererProps) {
           case 'image':
             return (
               <div key={block.id} className="space-y-2">
-                <img
-                  src={block.url}
+                <ImageWithFallback
+                  src={convertGitHubUrl(block.url)}
                   alt={block.alt || ''}
                   className="w-full rounded-2xl"
                   style={{ maxHeight: '500px', objectFit: 'cover' }}

@@ -8,6 +8,20 @@ import emailRoutes from './email.tsx';
 import dayContentRoutes from './day-content.tsx';
 import { migrateUserData } from './migrate-users.tsx';
 
+// Список адмін email адрес
+const ADMIN_EMAILS = [
+  'katywenka@gmail.com',
+  'katywenkatwins@gmail.com',
+  'smiiankate@gmail.com'
+];
+
+// Функція для перевірки чи користувач є адміном
+function isAdmin(email: string | undefined): boolean {
+  if (!email) return false;
+  const normalizedEmail = email.toLowerCase().trim();
+  return ADMIN_EMAILS.includes(normalizedEmail);
+}
+
 const app = new Hono();
 
 // Enable logger
@@ -188,6 +202,38 @@ app.post("/make-server-dc8cbf1f/signin", async (c) => {
       return c.json({ error: 'Failed to create session' }, 400);
     }
 
+    // Перевіряємо чи є у користувача тариф
+    const userData = await kv.get(`user:${data.user.id}`);
+    const hasTier = userData?.tier && userData?.payment_status === 'paid';
+    
+    console.log('👤 User login:', {
+      email: data.user.email,
+      hasTier,
+      currentTier: userData?.tier,
+      paymentStatus: userData?.payment_status
+    });
+
+    // Якщо немає тарифу, шукаємо pending платежі
+    let pendingPaymentChecked = false;
+    if (!hasTier) {
+      console.log('🔍 No tier found, checking for pending payments...');
+      
+      // Отримуємо всі платежі користувача
+      const allKeys = await kv.getByPrefix(`payment:`);
+      const userPayments = allKeys.filter(p => p.userId === data.user.id && p.status === 'pending');
+      
+      console.log('📋 Found pending payments:', userPayments.length);
+      
+      // Перевіряємо кожен pending платіж через WayForPay API
+      for (const payment of userPayments) {
+        console.log('🔄 Checking payment:', payment.orderReference);
+        // Тут можна додати логіку перевірки через WayForPay API
+        // Поки що просто логуємо
+      }
+      
+      pendingPaymentChecked = userPayments.length > 0;
+    }
+
     return c.json({ 
       success: true, 
       access_token: data.session.access_token,
@@ -195,7 +241,9 @@ app.post("/make-server-dc8cbf1f/signin", async (c) => {
         id: data.user.id,
         email: data.user.email,
         name: data.user.user_metadata?.name,
-      }
+      },
+      // Повідомляємо фронтенд що були перевірені pending платежі
+      pendingPaymentChecked
     });
   } catch (error) {
     console.error('Sign in error:', error);
@@ -349,7 +397,7 @@ app.get("/make-server-dc8cbf1f/check-day/:day", async (c) => {
     }
 
     // Check if user is admin
-    const isAdmin = user.email?.toLowerCase() === 'katywenka@gmail.com';
+    const userIsAdmin = isAdmin(user.email);
     
     // Get calendar settings - використовуємо правильний ключ
     const calendarConfig = await kv.get('calendar:config');
@@ -426,10 +474,8 @@ app.get("/make-server-dc8cbf1f/unlocked-days", async (c) => {
 app.post("/make-server-dc8cbf1f/migrate-users", async (c) => {
   try {
     const user = await verifyUser(c.req.header('Authorization'));
-    const userEmail = (user?.email || '').toLowerCase().trim();
-    const adminEmail = 'katywenka@gmail.com';
     
-    if (!user || userEmail !== adminEmail) {
+    if (!user || !isAdmin(user.email)) {
       return c.json({ error: 'Unauthorized - Admin only' }, 403);
     }
 
@@ -447,12 +493,10 @@ app.post("/make-server-dc8cbf1f/migrate-users", async (c) => {
 app.get("/make-server-dc8cbf1f/admin/users", async (c) => {
   try {
     const user = await verifyUser(c.req.header('Authorization'));
-    const userEmail = (user?.email || '').toLowerCase().trim();
-    const adminEmail = 'katywenka@gmail.com';
     
-    console.log('Admin check - User email:', user?.email, 'Normalized:', userEmail, 'Is admin:', userEmail === adminEmail);
+    console.log('Admin check - User email:', user?.email, 'Is admin:', isAdmin(user.email));
     
-    if (!user || userEmail !== adminEmail) {
+    if (!user || !isAdmin(user.email)) {
       return c.json({ error: 'Unauthorized - Admin only' }, 403);
     }
 
@@ -506,10 +550,8 @@ app.get("/make-server-dc8cbf1f/admin/users", async (c) => {
 app.put("/make-server-dc8cbf1f/admin/users/:userId", async (c) => {
   try {
     const user = await verifyUser(c.req.header('Authorization'));
-    const userEmail = (user?.email || '').toLowerCase().trim();
-    const adminEmail = 'katywenka@gmail.com';
     
-    if (!user || userEmail !== adminEmail) {
+    if (!user || !isAdmin(user.email)) {
       return c.json({ error: 'Unauthorized - Admin only' }, 403);
     }
 
@@ -552,10 +594,8 @@ app.put("/make-server-dc8cbf1f/admin/users/:userId", async (c) => {
 app.delete("/make-server-dc8cbf1f/admin/users/:userId", async (c) => {
   try {
     const user = await verifyUser(c.req.header('Authorization'));
-    const userEmail = (user?.email || '').toLowerCase().trim();
-    const adminEmail = 'katywenka@gmail.com';
     
-    if (!user || userEmail !== adminEmail) {
+    if (!user || !isAdmin(user.email)) {
       return c.json({ error: 'Unauthorized - Admin only' }, 403);
     }
 
@@ -579,10 +619,8 @@ app.delete("/make-server-dc8cbf1f/admin/users/:userId", async (c) => {
 app.get("/make-server-dc8cbf1f/admin/payments", async (c) => {
   try {
     const user = await verifyUser(c.req.header('Authorization'));
-    const userEmail = (user?.email || '').toLowerCase().trim();
-    const adminEmail = 'katywenka@gmail.com';
     
-    if (!user || userEmail !== adminEmail) {
+    if (!user || !isAdmin(user.email)) {
       return c.json({ error: 'Unauthorized - Admin only' }, 403);
     }
 
@@ -621,10 +659,8 @@ app.get("/make-server-dc8cbf1f/admin/payments", async (c) => {
 app.post("/make-server-dc8cbf1f/admin/mark-advent-user/:userId", async (c) => {
   try {
     const user = await verifyUser(c.req.header('Authorization'));
-    const userEmail = (user?.email || '').toLowerCase().trim();
-    const adminEmail = 'katywenka@gmail.com';
     
-    if (!user || userEmail !== adminEmail) {
+    if (!user || !isAdmin(user.email)) {
       return c.json({ error: 'Unauthorized - Admin only' }, 403);
     }
 
@@ -657,10 +693,8 @@ app.post("/make-server-dc8cbf1f/admin/mark-advent-user/:userId", async (c) => {
 app.get("/make-server-dc8cbf1f/admin/calendar-config", async (c) => {
   try {
     const user = await verifyUser(c.req.header('Authorization'));
-    const userEmail = (user?.email || '').toLowerCase().trim();
-    const adminEmail = 'katywenka@gmail.com';
     
-    if (!user || userEmail !== adminEmail) {
+    if (!user || !isAdmin(user.email)) {
       return c.json({ error: 'Unauthorized - Admin only' }, 403);
     }
 

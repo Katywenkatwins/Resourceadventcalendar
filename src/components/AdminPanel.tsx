@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Pencil, Trash2, ArrowLeft, Users, Calendar, Settings, CreditCard } from 'lucide-react';
 import { DayContentEditor } from './DayContentEditor';
 import { CalendarSettings } from './CalendarSettings';
+import { UpdateExpertPhotos } from './UpdateExpertPhotos';
 import { TierContent } from '../types/contentBlocks';
 import { ExpertData, ThemeData } from '../types/dayData';
 import { projectId } from '../utils/supabase/info';
@@ -51,7 +52,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'users' | 'payments' | 'days' | 'settings'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'payments' | 'days' | 'settings' | 'experts'>('users');
   const [editingDay, setEditingDay] = useState<number | null>(null);
   const [dayContents, setDayContents] = useState<Map<number, TierContent>>(new Map());
   const [dayExperts, setDayExperts] = useState<Map<number, ExpertData>>(new Map());
@@ -205,6 +206,41 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
       }
     } catch (error) {
       console.error('Error loading payments:', error);
+    }
+  };
+
+  const handleRefreshPaymentStatus = async (orderReference: string) => {
+    try {
+      const accessToken = await getAccessToken();
+      
+      console.log('🔄 Refreshing payment status for:', orderReference);
+      
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-dc8cbf1f/payment/check-wayforpay-status`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ orderReference }),
+        }
+      );
+
+      const data = await response.json();
+      console.log('Payment status refresh result:', data);
+
+      if (data.success) {
+        alert(`Статус оновлено! ${data.message}\n\nWayForPay відповідь:\n${JSON.stringify(data.wayforpayData, null, 2)}`);
+        // Перезавантажуємо список платежів і користувачів
+        await loadPayments();
+        await loadUsers();
+      } else {
+        alert(`Не вдалося оновити статус: ${data.message || 'Невідома помилка'}\n\nWayForPay відповідь:\n${JSON.stringify(data.wayforpayData, null, 2)}`);
+      }
+    } catch (error) {
+      console.error('Error refreshing payment status:', error);
+      alert(`Помилка при оновленні статусу: ${error.message}`);
     }
   };
 
@@ -542,6 +578,14 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
             <Settings className="w-4 h-4" />
             Налаштування календаря
           </Button>
+          <Button
+            variant={activeTab === 'experts' ? 'default' : 'outline'}
+            onClick={() => setActiveTab('experts')}
+            className="flex items-center gap-2"
+          >
+            <Users className="w-4 h-4" />
+            Оновити фото експертів
+          </Button>
         </div>
 
         {/* Users Tab */}
@@ -682,7 +726,130 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
         {activeTab === 'payments' && (
           <Card>
             <CardHeader>
-              <CardTitle>Платежі ({payments.length})</CardTitle>
+              <div className="flex justify-between items-center">
+                <CardTitle>Платежі ({payments.length})</CardTitle>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      if (!confirm('Оновити платежі для oksana1999hrl@gmail.com?')) return;
+                      
+                      try {
+                        const accessToken = await getAccessToken();
+                        const response = await fetch(
+                          `https://${projectId}.supabase.co/functions/v1/make-server-dc8cbf1f/payment/update-by-email`,
+                          {
+                            method: 'POST',
+                            headers: {
+                              'Authorization': `Bearer ${accessToken}`,
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ email: 'oksana1999hrl@gmail.com' }),
+                          }
+                        );
+                        
+                        const data = await response.json();
+                        console.log('Update result:', data);
+                        
+                        if (data.success) {
+                          alert(`Оксана: ${data.results.length} платежів перевірено\n\n${data.results.map(r => 
+                            `${r.orderReference}: ${r.status}${r.tier ? ' → ' + r.tier : ''}`
+                          ).join('\n')}`);
+                          await loadPayments();
+                          await loadUsers();
+                        } else {
+                          alert(`Помилка: ${data.error}`);
+                        }
+                      } catch (error) {
+                        alert(`Помилка: ${error.message}`);
+                      }
+                    }}
+                  >
+                    ✅ Оксана
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      if (!confirm('Оновити платежі для szhizhnevdkaya@ukr.net?')) return;
+                      
+                      try {
+                        const accessToken = await getAccessToken();
+                        const response = await fetch(
+                          `https://${projectId}.supabase.co/functions/v1/make-server-dc8cbf1f/payment/update-by-email`,
+                          {
+                            method: 'POST',
+                            headers: {
+                              'Authorization': `Bearer ${accessToken}`,
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ email: 'szhizhnevdkaya@ukr.net' }),
+                          }
+                        );
+                        
+                        const data = await response.json();
+                        console.log('Update result:', data);
+                        
+                        if (data.success) {
+                          alert(`Світлана: ${data.results.length} платежів перевірено\n\n${data.results.map(r => 
+                            `${r.orderReference}: ${r.status}${r.tier ? ' → ' + r.tier : ''}`
+                          ).join('\n')}`);
+                          await loadPayments();
+                          await loadUsers();
+                        } else {
+                          alert(`Помилка: ${data.error}`);
+                        }
+                      } catch (error) {
+                        alert(`Помилка: ${error.message}`);
+                      }
+                    }}
+                  >
+                    ✅ Світлана
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      const email = prompt('Введіть email користувача для перевірки всіх його платежів:');
+                      if (!email) return;
+                      
+                      try {
+                        const accessToken = await getAccessToken();
+                        const response = await fetch(
+                          `https://${projectId}.supabase.co/functions/v1/make-server-dc8cbf1f/payment/update-by-email`,
+                          {
+                            method: 'POST',
+                            headers: {
+                              'Authorization': `Bearer ${accessToken}`,
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ email }),
+                          }
+                        );
+                        
+                        const data = await response.json();
+                        console.log('Update by email result:', data);
+                        
+                        if (data.success) {
+                          alert(`Перевірено платежів: ${data.results.length}\n\n${data.results.map(r => 
+                            `${r.orderReference}: ${r.status}${r.tier ? ' (тариф: ' + r.tier + ')' : ''}`
+                          ).join('\n')}`);
+                          await loadPayments();
+                          await loadUsers();
+                        } else {
+                          alert(`Помилка: ${data.error || 'Невідома помилка'}`);
+                        }
+                      } catch (error) {
+                        console.error('Error:', error);
+                        alert(`Помилка: ${error.message}`);
+                      }
+                    }}
+                  >
+                    🔄 Інший email
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -699,6 +866,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                       <TableHead>Референс</TableHead>
                       <TableHead>Транзакція</TableHead>
                       <TableHead>Статус транзакції</TableHead>
+                      <TableHead>Дії</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -733,6 +901,17 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
                         </TableCell>
                         <TableCell>
                           {payment.transactionStatus}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRefreshPaymentStatus(payment.orderReference)}
+                            title="Перевірити статус через WayForPay API"
+                            className={payment.status === 'completed' ? 'opacity-50' : ''}
+                          >
+                            🔄 Оновити
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -930,6 +1109,13 @@ https://{supabase-url}/functions/v1/make-server-dc8cbf1f/payment/callback
 
             {/* Налаштування календаря */}
             <CalendarSettings accessToken={localStorage.getItem('advent_access_token') || ''} />
+          </div>
+        )}
+
+        {/* Experts Tab */}
+        {activeTab === 'experts' && (
+          <div className="space-y-6">
+            <UpdateExpertPhotos />
           </div>
         )}
 

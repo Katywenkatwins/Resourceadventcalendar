@@ -524,6 +524,303 @@ app.get('/user/tier', async (c) => {
   }
 });
 
+// Оновлення статусу для конкретних користувачів за email (для адмінів)
+app.post('/payment/update-by-email', async (c) => {
+  try {
+    const user = await verifyUser(c.req.header('Authorization'));
+    if (!user) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    // Перевірка що це адмін
+    if (user.email !== 'katywenka@gmail.com') {
+      return c.json({ error: 'Admin access required' }, 403);
+    }
+
+    const { email } = await c.req.json();
+    
+    console.log('🔍 ========================================');
+    console.log('🔍 Updating payments for user:', email);
+    
+    // Знаходимо користувача за email
+    const supabase = getSupabaseAdmin();
+    const { data: users, error: userError } = await supabase.auth.admin.listUsers();
+    
+    if (userError) {
+      console.error('❌ Error fetching users:', userError);
+      return c.json({ error: 'Failed to fetch users' }, 500);
+    }
+    
+    const targetUser = users.users.find(u => u.email === email);
+    
+    if (!targetUser) {
+      console.error('❌ User not found:', email);
+      return c.json({ error: 'User not found' }, 404);
+    }
+    
+    console.log('👤 Found user:', targetUser.id, targetUser.email);
+    
+    // Знаходимо всі платежі цього користувача
+    const allKeys = await kv.getByPrefix(`payment:`);
+    const userPayments = allKeys.filter(p => p.userId === targetUser.id);
+    
+    console.log('📋 Found payments:', userPayments.length);
+    
+    const results = [];
+    
+    for (const payment of userPayments) {
+      console.log('🔄 Checking payment:', payment.orderReference, 'status:', payment.status);
+      
+      // Перевіряємо через WayForPay API
+      const requestData = {
+        transactionType: 'CHECK_STATUS',
+        merchantAccount: MERCHANT_LOGIN,
+        orderReference: payment.orderReference,
+        apiVersion: 1
+      };
+      
+      const signature = generateSignature([
+        requestData.merchantAccount,
+        requestData.orderReference
+      ]);
+      
+      const wayforpayRequest = {
+        ...requestData,
+        merchantSignature: signature
+      };
+      
+      console.log('📤 Sending request to WayForPay for:', payment.orderReference);
+      
+      try {
+        const response = await fetch('https://api.wayforpay.com/api', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(wayforpayRequest)
+        });
+        
+        const wayforpayData = await response.json();
+        console.log('📥 WayForPay response:', JSON.stringify(wayforpayData, null, 2));
+        console.log('📥 reasonCode:', wayforpayData.reasonCode, 'type:', typeof wayforpayData.reasonCode);
+        console.log('📥 transactionStatus:', wayforpayData.transactionStatus);
+        console.log('📥 reason:', wayforpayData.reason);
+        
+        // reasonCode може бути string або number
+        const isApproved = wayforpayData.reasonCode == 1100 || 
+                           wayforpayData.transactionStatus === 'Approved' ||
+                           wayforpayData.reason === 'Ok';
+        
+        if (isApproved && payment.status !== 'completed') {
+          // Оновлюємо статус платежу
+          const updatedPayment = {
+            ...payment,
+            status: 'completed',
+            transactionStatus: wayforpayData.transactionStatus || 'Approved',
+            transactionId: wayforpayData.transactionId,
+            completedAt: new Date().toISOString(),
+            updatedFromAPI: true
+          };
+          
+          await kv.set(`payment:${payment.orderReference}`, updatedPayment);
+          console.log('✅ Payment updated to completed');
+          
+          // Оновлюємо користувача
+          const userData = await kv.get(`user:${targetUser.id}`);
+          const updatedUserData = {
+            ...(userData || {}),
+            id: targetUser.id,
+            email: targetUser.email,
+            name: targetUser.user_metadata?.name || userData?.name || 'User',
+            tier: payment.tier,
+            payment_status: 'paid',
+            transaction_id: payment.orderReference,
+            payment_date: new Date().toISOString(),
+            progress: userData?.progress || []
+          };
+          
+          await kv.set(`user:${targetUser.id}`, updatedUserData);
+          
+          await supabase.auth.admin.updateUserById(targetUser.id, {
+            user_metadata: updatedUserData
+          });
+          
+          console.log('✅ User tier updated to:', payment.tier);
+          
+          results.push({
+            orderReference: payment.orderReference,
+            status: 'updated',
+            tier: payment.tier
+          });
+        } else {
+          results.push({
+            orderReference: payment.orderReference,
+            status: payment.status === 'completed' ? 'already_completed' : 'not_approved',
+            wayforpayStatus: wayforpayData.transactionStatus
+          });
+        }
+      } catch (error) {
+        console.error('❌ Error checking payment:', payment.orderReference, error);
+        results.push({
+          orderReference: payment.orderReference,
+          status: 'error',
+          error: error.message
+        });
+      }
+    }
+    
+    console.log('✅ ========================================');
+    console.log('✅ Payment update complete for:', email);
+    
+    return c.json({
+      success: true,
+      email,
+      userId: targetUser.id,
+      results
+    });
+    
+  } catch (error) {
+    console.error('❌ Error updating payments by email:', error);
+    return c.json({ error: 'Failed to update payments', details: error.message }, 500);
+  }
+});
+
+// Перевірка статусу оплати через WayForPay API (для адмінів)
+app.post('/payment/check-wayforpay-status', async (c) => {
+  try {
+    const user = await verifyUser(c.req.header('Authorization'));
+    if (!user) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    // Перевірка що це адмін
+    if (user.email !== 'katywenka@gmail.com') {
+      return c.json({ error: 'Admin access required' }, 403);
+    }
+
+    const { orderReference } = await c.req.json();
+    
+    console.log('🔍 ========================================');
+    console.log('🔍 Checking payment status with WayForPay for:', orderReference);
+    
+    // Отримуємо платіж з бази
+    const payment = await kv.get(`payment:${orderReference}`);
+    
+    if (!payment) {
+      console.error('❌ Payment not found:', orderReference);
+      return c.json({ error: 'Payment not found' }, 404);
+    }
+
+    console.log('💾 Current payment in DB:', payment);
+    
+    // Відправляємо запит до WayForPay API для перевірки статусу
+    const requestData = {
+      transactionType: 'CHECK_STATUS',
+      merchantAccount: MERCHANT_LOGIN,
+      orderReference: orderReference,
+      apiVersion: 1
+    };
+    
+    // Генеруємо підпис
+    const signature = generateSignature([
+      requestData.merchantAccount,
+      requestData.orderReference
+    ]);
+    
+    const wayforpayRequest = {
+      ...requestData,
+      merchantSignature: signature
+    };
+    
+    console.log('📤 Sending request to WayForPay:', wayforpayRequest);
+    
+    const response = await fetch('https://api.wayforpay.com/api', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(wayforpayRequest)
+    });
+    
+    const wayforpayData = await response.json();
+    console.log('📥 WayForPay response:', JSON.stringify(wayforpayData, null, 2));
+    console.log('📥 reasonCode:', wayforpayData.reasonCode, 'type:', typeof wayforpayData.reasonCode);
+    console.log('📥 transactionStatus:', wayforpayData.transactionStatus);
+    console.log('📥 reason:', wayforpayData.reason);
+    
+    // Перевіряємо чи оплата успішна згідно з WayForPay
+    // reasonCode може бути string або number
+    const isApproved = wayforpayData.reasonCode == 1100 || 
+                       wayforpayData.transactionStatus === 'Approved' ||
+                       wayforpayData.reason === 'Ok';
+    
+    console.log('✅ Payment approved by WayForPay:', isApproved);
+    
+    if (isApproved && payment.status !== 'completed') {
+      // Оновлюємо статус платежу
+      const updatedPayment = {
+        ...payment,
+        status: 'completed',
+        transactionStatus: wayforpayData.transactionStatus || 'Approved',
+        transactionId: wayforpayData.transactionId,
+        completedAt: new Date().toISOString(),
+        updatedFromAPI: true
+      };
+      
+      console.log('💾 Updating payment status to completed...');
+      await kv.set(`payment:${orderReference}`, updatedPayment);
+      
+      // Оновлюємо користувача
+      const userData = await kv.get(`user:${payment.userId}`);
+      if (userData) {
+        const supabase = getSupabaseAdmin();
+        
+        const updatedUserData = {
+          ...userData,
+          tier: payment.tier,
+          payment_status: 'paid',
+          transaction_id: orderReference,
+          payment_date: new Date().toISOString()
+        };
+        
+        console.log('💾 Updating user data...');
+        await kv.set(`user:${payment.userId}`, updatedUserData);
+        
+        await supabase.auth.admin.updateUserById(payment.userId, {
+          user_metadata: updatedUserData
+        });
+        
+        console.log('✅ User tier updated to:', payment.tier);
+      }
+      
+      return c.json({
+        success: true,
+        message: 'Payment status updated from WayForPay',
+        wayforpayData,
+        updatedPayment
+      });
+    } else if (payment.status === 'completed') {
+      return c.json({
+        success: true,
+        message: 'Payment already completed',
+        wayforpayData,
+        payment
+      });
+    } else {
+      return c.json({
+        success: false,
+        message: 'Payment not approved by WayForPay',
+        wayforpayData,
+        payment
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ Error checking WayForPay status:', error);
+    return c.json({ error: 'Failed to check payment status', details: error.message }, 500);
+  }
+});
+
 // DEMO: Тестовий ендпоінт для симуляції успішної оплати
 app.post('/payment/demo-success', async (c) => {
   try {

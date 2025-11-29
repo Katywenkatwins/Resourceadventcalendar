@@ -163,17 +163,47 @@ const VIP_EXPERTS = [
     role: 'Веб-дизайнерка, стратег і творча менторка',
     instagram: 'https://www.instagram.com/kateryna_smiian/',
     instagramHandle: '@kateryna_smiian',
-    photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/img/Frame%20289%203.png?raw=true',
+    photo: 'https://raw.githubusercontent.com/Katywenkatwins/advent-marafon/main/Frame%20289%203.png',
     bonus: 'Експрес-діагностика бренду / сайту / сторінки (30 хвилин)',
     description: 'Швидкий, але дуже точний аудит з конкретними правками.',
     color: '#e6963a'
+  },
+  {
+    name: 'Анастасія Черкіс',
+    role: 'Тілесна терапевтка, йога тренер, жіночий ментор',
+    instagram: 'https://www.instagram.com/anastasiyacherkis/',
+    instagramHandle: '@anastasiyacherkis',
+    photo: 'https://raw.githubusercontent.com/Katywenkatwins/advent-marafon/main/Cherkis.png',
+    bonus: 'Консультація з психосоматики',
+    description: 'Глибоке дослідження психосоматичних проявів та шляхи їх трансформації.',
+    color: '#2d5a3d'
+  },
+  {
+    name: 'Анна Балицька',
+    role: 'Майстер кундаліні йоги, провідниця глибинних духовно-тілесних практик',
+    instagram: 'https://www.instagram.com/annabalitskaya_kundaliniyoga/',
+    instagramHandle: '@annabalitskaya_kundaliniyoga',
+    photo: 'https://raw.githubusercontent.com/Katywenkatwins/advent-marafon/main/Frame%2048097618.png',
+    bonus: 'Персональна консультація з майстром кундаліні йоги',
+    description: 'Робота з запитом клієнта, підсвічування на що звернути увагу і рекомендація практик та дій, які можуть допомогти',
+    color: '#d94a4a'
+  },
+  {
+    name: 'Олена Ярема',
+    role: 'Експертка з розвитку особистого бренду через Instagram',
+    instagram: 'https://www.instagram.com/elena.yarema/',
+    instagramHandle: '@elena.yarema',
+    photo: 'https://raw.githubusercontent.com/Katywenkatwins/advent-marafon/main/432775227_1159328098392853_5798591516054333811_n.jpg',
+    bonus: 'Розбір блогу. Чи готовий ваш блог до монетизації',
+    description: 'Детальний аналіз вашого блогу та конкретні рекомендації щодо підготовки до монетизації.',
+    color: '#1e3a5f'
   },
   {
     name: 'Тетяна Славік',
     role: 'Психолог',
     instagram: 'https://www.instagram.com/tanya.slavik/',
     instagramHandle: '@tanya.slavik',
-    photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Slavik.png?raw=true',
+    photo: 'https://raw.githubusercontent.com/Katywenkatwins/advent-marafon/main/Slavik.png',
     bonus: '1,5 годинна сесія із повним закриттям запиту',
     description: 'Підсвітимо звідки іде запит і що з ним робити, працюю у науково доказових методах.',
     color: '#2d5a3d'
@@ -183,7 +213,7 @@ const VIP_EXPERTS = [
     role: 'Наставник жінок, Access bars, МАКкарти, Лідерка української компанії Choice',
     instagram: 'https://www.instagram.com/ira_nova_ivanova/',
     instagramHandle: '@ira_nova_ivanova',
-    photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Ivanova.png?raw=true',
+    photo: 'https://raw.githubusercontent.com/Katywenkatwins/advent-marafon/main/Ivanova.png',
     bonus: 'Сесія МАК, один запит, тривалість 60-90 хвилин',
     description: 'Можливий як онлайн так і офлайн формати. Також подарунок від мене кожному, хто прийде на сесію доглядові засоби від бренду White Mandarin.',
     color: '#d94a4a'
@@ -193,17 +223,17 @@ const VIP_EXPERTS = [
     role: 'Астропсихолог, коуч',
     instagram: 'https://www.instagram.com/astra.kotiki/',
     instagramHandle: '@astra.kotiki',
-    photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Vernygora.png?raw=true',
+    photo: 'https://raw.githubusercontent.com/Katywenkatwins/advent-marafon/main/Vernygora.png',
     bonus: 'Колода персональних карт-афірмацій та підбір мінералів по натальній карті',
     description: 'Унікальний набір персональних інструментів для вашої трансформації.',
     color: '#1e3a5f'
   },
   {
     name: 'Ванесса Січ',
-    role: 'Візажист-стиліст, викладачка бюті курсів',
+    role: 'Візажист-стиліст, викладачка б\'юті курсів',
     instagram: 'https://www.instagram.com/vanessa.sich/',
     instagramHandle: '@vanessa.sich',
-    photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Sich.png?raw=true',
+    photo: 'https://raw.githubusercontent.com/Katywenkatwins/advent-marafon/main/Sich.png',
     bonus: 'Урок "Сам собі візажист"',
     description: 'Навчу створювати ідеальний макіяж для себе в домашніх умовах.',
     color: '#e6963a'
@@ -213,7 +243,7 @@ const VIP_EXPERTS = [
     role: 'Лікар-дерматолог, психотерапевтка, художниця та авторка метафоричної колоди карт «Шлях трансформації»',
     instagram: 'https://www.instagram.com/dr_kseniya_nedoluzhenko/',
     instagramHandle: '@dr_kseniya_nedoluzhenko',
-    photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Nedolu.png?raw=true',
+    photo: 'https://raw.githubusercontent.com/Katywenkatwins/advent-marafon/main/Nedolu.png',
     bonus: 'Авторська колода МАК карт',
     description: 'Унікальний інструмент для самопізнання та трансформації.',
     color: '#2d5a3d'
@@ -223,7 +253,7 @@ const VIP_EXPERTS = [
     role: 'Провідник для жінок. Досліджую, що і як нас робить по-справжньому проявленими',
     instagram: 'https://www.instagram.com/letytsia_d',
     instagramHandle: '@letytsia_d',
-    photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Letic.png?raw=true',
+    photo: 'https://raw.githubusercontent.com/Katywenkatwins/advent-marafon/main/Letic.png',
     bonus: 'Потокова сесія (90 хв)',
     description: 'Глибоке дослідження вашої справжньої природи та прояву.',
     color: '#d94a4a'
@@ -233,7 +263,7 @@ const VIP_EXPERTS = [
     role: 'Експертка з монетизації та просування інстаграм',
     instagram: 'https://www.instagram.com/ira.falatovych/',
     instagramHandle: '@ira.falatovych',
-    photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/falatovich.png?raw=true',
+    photo: 'https://raw.githubusercontent.com/Katywenkatwins/advent-marafon/main/falatovich.png',
     bonus: 'Стратегічна сесія, яка перезапустить твій блог і прибере все зайве',
     description: 'Формат: онлайн зустріч тривалістю 60-90 хв.',
     color: '#1e3a5f'
@@ -243,7 +273,7 @@ const VIP_EXPERTS = [
     role: 'Арт-терапія',
     instagram: 'https://www.instagram.com/andrianna_kushnir/',
     instagramHandle: '@andrianna_kushnir',
-    photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Kushnir.png?raw=true',
+    photo: 'https://raw.githubusercontent.com/Katywenkatwins/advent-marafon/main/Kushnir.png',
     bonus: 'Арт-терапевтична сесія «Хто я» та «Мама та дитина»',
     description: 'Глибока арт-терапевтична практика для самопізнання та розкриття вашої справжньої сутності.',
     color: '#e6963a'
@@ -253,7 +283,7 @@ const VIP_EXPERTS = [
     role: 'Стилістка 45+, менторка жіночих брендів',
     instagram: 'https://www.instagram.com/vyshnya.brand.stylist/',
     instagramHandle: '@vyshnya.brand.stylist',
-    photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Vushnya.png?raw=true',
+    photo: 'https://raw.githubusercontent.com/Katywenkatwins/advent-marafon/main/Vushnya.png',
     bonus: 'Кольорова карта персонального стилю',
     description: 'Унікальна кольорова карта, створена спеціально для вас, яка розкриє ваш персональний стиль.',
     color: '#2d5a3d'
@@ -263,20 +293,103 @@ const VIP_EXPERTS = [
     role: 'Fashion-психолог, стиліст та експерт з психологічного портрету особистості',
     instagram: 'https://www.instagram.com/anna.kanakha/',
     instagramHandle: '@anna.kanakha',
-    photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Kanakha.png?raw=true',
+    photo: 'https://raw.githubusercontent.com/Katywenkatwins/advent-marafon/main/Kanakha.png',
     bonus: 'Індивідуальний річний прогноз 2026',
     description: 'Персональний прогноз на 2026 рік на основі психологічного портрету та системи Архетипів.',
     color: '#d94a4a'
   },
+  {
+    name: 'Лілія Братусь',
+    role: 'Дизайнер одягу, власниця Lili Bratus Atelier, авторка Трансформаційних Програм для Жінок',
+    instagram: 'https://www.instagram.com/lilibratus/',
+    instagramHandle: '@lilibratus',
+    photo: 'https://raw.githubusercontent.com/Katywenkatwins/advent-marafon/main/Frame%2048097616.png',
+    bonus: 'Індивідуальна консультація по стилю по темі Образ як інструмент ресурсного стану',
+    description: 'Персональна консультація для створення вашого унікального стилю та образу на рік.',
+    color: '#1e3a5f'
+  },
+  {
+    name: 'Kristina Elias',
+    role: 'Мультидисциплінарність. Наука × Духовність, Бізнес × Творчість. CEO Wild Volt',
+    instagram: 'https://www.instagram.com/kristin.elias/',
+    instagramHandle: '@kristin.elias',
+    photo: 'https://raw.githubusercontent.com/Katywenkatwins/advent-marafon/main/KrisElias.png',
+    bonus: 'Розбір «ПРОБУДЖЕННЯ ВЕНЕРИ» у вигляді VENUS MAP',
+    description: 'Карта твоєї жіночої сили, природної краси, що світиться зсередини, глибокої чуттєвості, здорових стосунків.',
+    color: '#e6963a'
+  },
+  {
+    name: 'Саша',
+    role: 'Тренер з пілатесу',
+    instagram: 'https://www.instagram.com/oleksandra.balance/',
+    instagramHandle: '@oleksandra.balance',
+    photo: 'https://raw.githubusercontent.com/Katywenkatwins/advent-marafon/main/Sasha.png',
+    bonus: '2 індивідуальних заняття по пілатесу на реформері',
+    description: 'У найестетичнішій студії Ужгорода @Embody із преміум обладнянням «Merrithew». ОФЛАЙН УЖГОРОД.',
+    color: '#2d5a3d'
+  },
+  {
+    name: 'Оксана Шуфрич',
+    role: 'Психолог-гіпнотерапевт',
+    instagram: 'https://www.instagram.com/oksana_shufrych/',
+    instagramHandle: '@oksana_shufrych',
+    photo: 'https://raw.githubusercontent.com/Katywenkatwins/advent-marafon/main/shufr.png',
+    bonus: 'Консультація психолога-гіпнотерапевта',
+    description: 'В сфері проявлення, ведення соцмереж, зміна професії чи виду діяльності.',
+    color: '#d94a4a'
+  },
+  {
+    name: 'Ольга Карабиньош',
+    role: 'Перинатальна психологиня, ведуча жіночих практик',
+    instagram: 'https://www.instagram.com/olga.karabinosh/',
+    instagramHandle: '@olga.karabinosh',
+    photo: 'https://raw.githubusercontent.com/Katywenkatwins/advent-marafon/main/Karab.png',
+    bonus: 'Діагностично-терапевтична сесія "Мандала"',
+    description: 'Глибока діагностично-терапевтична сесія тривалістю 60-90 хвилин.',
+    color: '#1e3a5f'
+  },
+  {
+    name: 'Чеканська Джулі',
+    role: 'Музикантка, композиторка',
+    instagram: 'https://www.instagram.com/musicjully.art/',
+    instagramHandle: '@musicjully.art',
+    photo: 'https://raw.githubusercontent.com/Katywenkatwins/advent-marafon/main/Chekanska.png',
+    bonus: 'Створення унікальної фортепіанної мелодії',
+    description: 'Створення унікальної фортепіанної мелодії від композиторки та музичної виконавиці ARWEN.\n\nМелодія створюється спеціально для вашої події, стану, емоції або фантазії.\nЦе ваша власна музична історія — унікальна, неповторна, з виключним правом на використання.\n\nВи отримуєте не просто звук, а живу історію у нотах, що відображає вашу індивідуальність, відчуття та настрій.',
+    color: '#e6963a'
+  },
+  {
+    name: 'Ірина Гончаренко',
+    role: 'Тренер з інтимної гімнастики та жіночої сексуальності',
+    instagram: 'https://www.instagram.com/irahappylife_/',
+    instagramHandle: '@irahappylife_',
+    photo: 'https://raw.githubusercontent.com/Katywenkatwins/advent-marafon/main/goncharenko.png',
+    bonus: 'Консультація на вибір: жіноче здоров\'я або внутрішній стан',
+    description: 'Консультація з жіночого здоров\'я та м\'язів тазового дна:\nВизначаємо стан інтимних м\'язів і складаю практичні рекомендації для здоров\'я, тонусу та чуттєвості.\n\nАБО\n\nКонсультація з внутрішнього стану та життєвих ситуацій:\nДля жінок, які хочуть розібратися зі своїми емоціями й поточними станами — від апатії та втрати ресурсу до сімейних труднощів і повторюваних сценаріїв. Допомагаю знайти ясність, внутрішню опору та повернути відчуття себе.',
+    color: '#d94a4a'
+  },
+  {
+    name: 'Таня Прозорова',
+    role: 'Тренерка дихання',
+    instagram: 'https://www.instagram.com/tanyaprozorova_/',
+    instagramHandle: '@tanyaprozorova_',
+    photo: 'https://raw.githubusercontent.com/Katywenkatwins/advent-marafon/main/Prozor.png',
+    bonus: 'Акме-коуч сесія',
+    description: 'Індивідуальна акме-коуч сесія для досягнення вашого максимального потенціалу та розкриття внутрішніх ресурсів.',
+    color: '#2d5a3d'
+  },
 ];
 
 // Константи для партнерів - винесено для оптимізації
-const PARTNERS_ROW_1 = [
-  { name: 'Lebet Project', logo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/lebet.png?raw=true', link: 'https://www.instagram.com/lebet.project/' },
-  { name: 'Irina Kaniuk', logo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/image%2048.png?raw=true', link: 'https://www.instagram.com/irina_kaniuk_/' },
+const PARTNERS = [
+  { name: 'Lebet', logo: 'https://github.com/Katywenkatwins/advent-marafon/blob/main/lebet.png?raw=true', link: 'https://www.instagram.com/lebet.project', isRound: true },
+  { name: 'Irina Kaniuk', logo: 'https://github.com/Katywenkatwins/advent-marafon/blob/main/image%2048.png?raw=true', link: 'https://www.instagram.com/irina_kaniuk_/', isRound: false },
+  { name: 'Upgrade is Great', logo: 'https://raw.githubusercontent.com/Katywenkatwins/advent-marafon/main/upgrade_logo_grey.png', link: 'https://www.instagram.com/upgradeisgreat/', isRound: false },
+  { name: 'Simply Happiness Inside', logo: 'https://github.com/Katywenkatwins/advent-marafon/blob/main/568253815_25118997134454367_3146515686541024656_n.jpg?raw=true', link: 'https://www.instagram.com/simply.happinessinside/', isRound: false },
+  { name: 'Ameli Cosmetics', logo: 'https://github.com/Katywenkatwins/advent-marafon/blob/main/Ameli.png?raw=true', link: 'https://www.instagram.com/amelicosmetics/', isRound: false },
+  { name: 'Mych Objects', logo: 'https://github.com/Katywenkatwins/advent-marafon/blob/main/mich.jpg?raw=true', link: 'https://www.instagram.com/mych.objects/', isRound: true },
+  { name: 'Valentyna Coach', logo: 'https://github.com/Katywenkatwins/advent-marafon/blob/main/coach.png?raw=true', link: 'https://www.instagram.com/valentyna__coach/', isRound: false },
 ];
-
-const PARTNERS_ROW_2 = [];
 
 // Константи для кроків - винесено для оптимізації
 const STEPS_DATA = [
@@ -311,14 +424,72 @@ const STEPS_DATA = [
 
 // Константи для тем - винесено для оптимізації
 const THEMES_DATA = [
-  { text: 'Заспокоїти тіло', icon: Heart },
-  { text: 'Зміцнити емоції', icon: Sparkles },
-  { text: 'Висвітлити цінності', icon: Star },
-  { text: 'Укріпити кордони', icon: Shield },
-  { text: 'Розширити бачення', icon: Globe },
-  { text: 'Відпустити минуле', icon: Wind },
-  { text: 'Налаштуватися на дію', icon: Target },
-  { text: '…і ще 17 кроків твоєї магічної подорожі', icon: Sparkles },
+  { 
+    text: 'Заспокоїти тіло', 
+    icon: Heart,
+    topics: [
+      'Твоя точка старту. Повернення в себе перед подорожжю',
+      'Контакт із тілом у період свят: як залишатися в балансі без контролю та заборон',
+      'Практика йоги',
+      'Тема: фітозаряд «стоп-апатія» топ 5 продуктів',
+      'Вправи для жіночого здоров\'я та енергії'
+    ]
+  },
+  { 
+    text: 'Зміцнити емоції', 
+    icon: Sparkles,
+    topics: [
+      'Як легко вийти з залипання в емоції та ролі. Як відновити звʼязок з Душею та усвідомлено прискорюватись на шляху',
+      'Музичний ритуал ранку і вечора: як звук відновлює емоції та внутрішню опору',
+      'Як відчути себе та свою внутрішню жінку через фарби та техніки малювання. І як знайти баланс з внутрішнім своїм світом',
+      'Створення мандали на намір'
+    ]
+  },
+  { 
+    text: 'Висвітлити цінності', 
+    icon: Star,
+    topics: [
+      'Як проявлятись з відкритого серденька. Цілісність - ключ',
+      'Як бути молодою, стильною й натхненною в будь-якому віці',
+      'Венера в натальній карті - як проявити любов до себе'
+    ]
+  },
+  { 
+    text: 'Укріпити кордони', 
+    icon: Shield,
+    topics: [
+      'Ідентичність, як перестати спиратися на зовнішнє і знайти внутрішню опору',
+      'Швидкий мейк на Різдво🎄',
+      'Інструменти у блозі, які змусять підписників купувати в 2026 р.',
+      '«Динамічна медитація - інтуїтивний танець «Звʼязок душі і тіла». Наші кордони міцні, коли ми знаходимося «в тілі», добре відчуваємо контакт тіла і душі'
+    ]
+  },
+  { 
+    text: 'Розширити бачення', 
+    icon: Globe,
+    topics: [
+      'Руни як мова душі. 24 дні до твого оновлення',
+      'Підказки гри ліли',
+      'Секрети роботи з клієнтами преміум сегменту. Практика вибір Творця',
+      'Магія образу'
+    ]
+  },
+  { 
+    text: 'Прийняття і вдячність', 
+    icon: Wind,
+    topics: [
+      'Дихальні практики',
+      'Практика-медитація вдячності. Вдячність як інструмент трансформацій'
+    ]
+  },
+  { 
+    text: 'Налаштуватися на дію', 
+    icon: Target,
+    topics: [
+      'Практика пілатесу. Включаємо тіло та заряджаємось на дію',
+      '«2026 - рік великих змін та можливостей. Твоя маршрутна карта успіху»'
+    ]
+  }
 ];
 
 export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalendar }: LandingPageProps) {
@@ -660,26 +831,45 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 max-w-4xl mx-auto">
-            {THEMES_DATA.map((theme, idx) => {
-              const IconComponent = theme.icon;
-              return (
-                <div
-                  key={idx}
-                  className="bg-white/70 backdrop-blur-sm rounded-xl sm:rounded-2xl p-5 sm:p-6 shadow-lg border-2 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group"
-                  style={{ borderColor: 'rgba(45,90,61,0.13)' }}
-                >
-                  <div className="flex items-center gap-3 sm:gap-4">
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                      <IconComponent className="w-6 h-6 sm:w-8 sm:h-8" style={{ color: '#2d5a3d' }} />
-                    </div>
-                    <span className="text-base sm:text-lg leading-[28px]" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}>
-                      {theme.text}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
+          <div className="max-w-4xl mx-auto">
+            <Accordion type="single" collapsible className="space-y-3 sm:space-y-4">
+              {THEMES_DATA.map((theme, idx) => {
+                const IconComponent = theme.icon;
+                return (
+                  <AccordionItem 
+                    key={idx} 
+                    value={`item-${idx}`}
+                    className="bg-white/70 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-lg border-2 overflow-hidden"
+                    style={{ borderColor: 'rgba(45,90,61,0.13)' }}
+                  >
+                    <AccordionTrigger className="px-5 sm:px-6 py-4 sm:py-5 hover:no-underline hover:bg-white/50 transition-all duration-300 [&[data-state=open]]:bg-white/50">
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center">
+                          <IconComponent className="w-6 h-6 sm:w-8 sm:h-8" style={{ color: '#2d5a3d' }} />
+                        </div>
+                        <span className="text-base sm:text-lg leading-[28px] text-left" style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif', fontWeight: 'bold' }}>
+                          {theme.text}
+                        </span>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-5 sm:px-6 pb-4 sm:pb-5">
+                      <ul className="space-y-2 sm:space-y-3 mt-2 ml-11 sm:ml-14">
+                        {theme.topics.map((topic, topicIdx) => (
+                          <li 
+                            key={topicIdx}
+                            className="text-sm sm:text-base leading-[24px] flex items-start gap-2"
+                            style={{ color: '#1e3a5f', fontFamily: 'Arial, sans-serif' }}
+                          >
+                            <span className="text-[#2d5a3d] mt-1 flex-shrink-0">•</span>
+                            <span>{topic}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </AccordionContent>
+                  </AccordionItem>
+                );
+              })}
+            </Accordion>
           </div>
 
           <div className="max-w-4xl mx-auto bg-gradient-to-r from-[#2d5a3d] to-[#1e3a5f] rounded-2xl sm:rounded-3xl p-8 sm:p-10 shadow-xl text-white space-y-4 sm:space-y-6 relative overflow-hidden">
@@ -753,29 +943,33 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
 
             {/* Expert Slider */}
             <ExpertSlider experts={[
-              { name: 'Сміян Катерина', instagram: 'kateryna_smiian', description: 'Веб-дизайнерка, стратег і творча менторка', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/img/Frame%20289%203.png?raw=true' },
-              { name: 'Анастасія Черкіс', instagram: 'anastasiyacherkis', description: 'Тілесна терапевтка, йога тренер, жіночий ментор', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Cherkis.png?raw=true' },
-              { name: 'Тетяна Славік', instagram: 'tanya.slavik', description: 'Психолог', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Slavik.png?raw=true' },
-              { name: 'Чеканська Джулі', instagram: 'musicjully.art', description: 'Музикантка, композиторка', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Chekanska.png?raw=true' },
-              { name: 'Олександр Король', instagram: 'dvaaya', description: 'Засновник школи буття «kNow»', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Korol.png?raw=true' },
-              { name: 'Іра Іванова', instagram: 'ira_nova_ivanova', description: 'Наставник жінок, Access bars, МАКкарти', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Ivanova.png?raw=true' },
-              { name: 'Ірина Вернигора', instagram: 'astra.kotiki', description: 'Астропсихолог, коуч', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Vernygora.png?raw=true' },
-              { name: 'Лабік Наталі', instagram: 'labyknatali', description: 'Йога-провідник', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Labik.png?raw=true' },
-              { name: 'Анна Стояновська', instagram: 'anna_greeen_', description: 'Ведичний нутріціолог', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Green.png?raw=true' },
-              { name: 'Ванесса Січ', instagram: 'vanessa.sich', description: 'Візажист-стиліст, викладачка бюті курсів', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Sich.png?raw=true' },
-              { name: 'Наталія Прокопчук', instagram: 'prokopchukart_com', description: 'Архітектор особистих брендів', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Prokop.png?raw=true' },
-              { name: 'Андріана Кушнір', instagram: 'andrianna_kushnir', description: 'Арт-терапія', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Kushnir.png?raw=true' },
-              { name: 'Саша', instagram: 'oleksandra.balance', description: 'Тренер з пілатесу', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Sasha.png?raw=true' },
-              { name: 'Ольга Карабіньош', instagram: 'o.karabinyosh', description: 'Перинатальна психологиня, ведуча жіночих практик', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Karab.png?raw=true' },
-              { name: 'Ксенія Недолуженко', instagram: 'dr_kseniya_nedoluzhenko', description: 'Лікар-дерматолог, психотерапевтка, художниця', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Nedolu.png?raw=true' },
-              { name: 'Летиція Дубовик', instagram: 'letytsia_d', description: 'Провідник для жінок', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Letic.png?raw=true' },
-              { name: 'Ірина Фалатович', instagram: 'ira.falatovych', description: 'Експертка з монетизації та просування Instagram', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/falatovich.png?raw=true' },
-              { name: 'Ірина Гончаренко', instagram: 'irahappylife_', description: 'Тренер з інтимної гімнастики та жіночої сексуальності', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/goncharenko.png?raw=true' },
-              { name: 'Катерина Вишня', instagram: 'vyshnya.brand.stylist', description: 'Стилістка 45+, менторка жіночих брендів', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Vushnya.png?raw=true' },
-              { name: 'Анна Канаха', instagram: 'anna.kanakha', description: 'Fashion-психолог, стиліст та експерт з психологічного портрету особистості по даті народження через систему Архетипів', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Kanakha.png?raw=true' },
-              { name: 'Ліля Братусь', instagram: 'lilibratus', description: 'Провідник до Жіночої Сили, Карпатська Чарівниця', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Lili.png?raw=true' },
-              { name: 'Крістіна Еліас', instagram: 'kristin.elias', description: 'Мультидисциплінарність. Наука × Духовність', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/KrisElias.png?raw=true' },
-              { name: 'Таня Прозорова', instagram: '', description: 'Тренерка дихання', photo: 'https://github.com/Katywenkatwins/Resourceadventcalendar/blob/main/Prozor.png?raw=true' },
+              { name: 'Сміян Катерина', instagram: 'kateryna_smiian', description: 'Веб-дизайнерка, стратег і творча менторка', photo: 'https://github.com/Katywenkatwins/advent-marafon/blob/main/Frame%20289%203.png?raw=true' },
+              { name: 'Анастасія Черкіс', instagram: 'anastasiyacherkis', description: 'Тілесна терапевтка, йога тренер, жіночий ментор', photo: 'https://github.com/Katywenkatwins/advent-marafon/blob/main/Cherkis.png?raw=true' },
+              { name: 'Анна Балицька', instagram: 'annabalitskaya_kundaliniyoga', description: 'Майстер кундаліні йоги, провідниця глибинних духовно-тілесних практик та авторка трансформаційних програм, які пройшли вже тисячі практикуючих по всьому світу', photo: 'https://github.com/Katywenkatwins/advent-marafon/blob/main/Frame%2048097618.png?raw=true' },
+              { name: 'Тетяна Славік', instagram: 'tanya.slavik', description: 'Психолог', photo: 'https://github.com/Katywenkatwins/advent-marafon/blob/main/Slavik.png?raw=true' },
+              { name: 'Чеканська Джулі', instagram: 'musicjully.art', description: 'Музикантка, композиторка', photo: 'https://github.com/Katywenkatwins/advent-marafon/blob/main/Chekanska.png?raw=true' },
+              { name: 'Олександр Король', instagram: 'dvaaya', description: 'Засновник школи буття «kNow»', photo: 'https://github.com/Katywenkatwins/advent-marafon/blob/main/Korol.png?raw=true' },
+              { name: 'Іра Іванова', instagram: 'ira_nova_ivanova', description: 'Наставник жінок, Access bars, МАКкарти', photo: 'https://github.com/Katywenkatwins/advent-marafon/blob/main/Ivanova.png?raw=true' },
+              { name: 'Ірина Вернигора', instagram: 'astra.kotiki', description: 'Астропсихолог, коуч', photo: 'https://github.com/Katywenkatwins/advent-marafon/blob/main/Vernygora.png?raw=true' },
+              { name: 'Лабік Наталі', instagram: 'labyknatali', description: 'Йога-провідник', photo: 'https://github.com/Katywenkatwins/advent-marafon/blob/main/Labik.png?raw=true' },
+              { name: 'Анна Стояновська', instagram: 'anna_greeen_', description: 'Ведичний нутріціолог', photo: 'https://github.com/Katywenkatwins/advent-marafon/blob/main/Green.png?raw=true' },
+              { name: 'Ванесса Січ', instagram: 'vanessa.sich', description: 'Візажист-стиліст, викладачка б\'юті курсів', photo: 'https://github.com/Katywenkatwins/advent-marafon/blob/main/Sich.png?raw=true' },
+              { name: 'Наталія Прокопчук', instagram: 'prokopchukart_com', description: 'Архітектор особистих брендів', photo: 'https://github.com/Katywenkatwins/advent-marafon/blob/main/Prokop.png?raw=true' },
+              { name: 'Андріана Кушнір', instagram: 'andrianna_kushnir', description: 'Арт-терапевт, художник, засновник та організатор Арт-проєкту «Мама та донька»', photo: 'https://github.com/Katywenkatwins/advent-marafon/blob/main/Kushnir.png?raw=true' },
+              { name: 'Саша', instagram: 'oleksandra.balance', description: 'Тренер з пілатесу', photo: 'https://github.com/Katywenkatwins/advent-marafon/blob/main/Sasha.png?raw=true' },
+              { name: 'Ольга Карабиньош', instagram: 'o.karabinyosh', description: 'Перинатальна психологиня, ведуча жіночих практик', photo: 'https://github.com/Katywenkatwins/advent-marafon/blob/main/Karab.png?raw=true' },
+              { name: 'Ксенія Недолуженко', instagram: 'dr_kseniya_nedoluzhenko', description: 'Лікар-дерматолог, психотерапевтка, художниця', photo: 'https://github.com/Katywenkatwins/advent-marafon/blob/main/Nedolu.png?raw=true' },
+              { name: 'Летиція Дубовик', instagram: 'letytsia_d', description: 'Провідник для жінок', photo: 'https://github.com/Katywenkatwins/advent-marafon/blob/main/Letic.png?raw=true' },
+              { name: 'Ірина Фалатович', instagram: 'ira.falatovych', description: 'Експертка з монетизації та просування Instagram', photo: 'https://github.com/Katywenkatwins/advent-marafon/blob/main/falatovich.png?raw=true' },
+              { name: 'Ірина Гончаренко', instagram: 'irahappylife_', description: 'Тренер з інтимної гімнастики та жіночої сексуальності', photo: 'https://github.com/Katywenkatwins/advent-marafon/blob/main/goncharenko.png?raw=true' },
+              { name: 'Катерина Вишня', instagram: 'vyshnya.brand.stylist', description: 'Стилістка 45+, менторка жіночих брендів', photo: 'https://github.com/Katywenkatwins/advent-marafon/blob/main/Vushnya.png?raw=true' },
+              { name: 'Анна Канаха', instagram: 'anna.kanakha', description: 'Fashion-психолог, стиліст та експерт з психологічного портрету особистості по даті народження через систему Архетипів', photo: 'https://github.com/Katywenkatwins/advent-marafon/blob/main/Kanakha.png?raw=true' },
+              { name: 'Лілія Братусь', instagram: 'lilibratus', description: 'Дизайнер одягу, власниця Lili Bratus Atelier, авторка Трансформаційних Програм для Жінок', photo: 'https://github.com/Katywenkatwins/advent-marafon/blob/main/Frame%2048097616.png?raw=true' },
+              { name: 'Kristina Elias', instagram: 'kristin.elias', description: 'Мультидисциплінарність. Наука × Духовність, Бізнес × Творчість. CEO Wild Volt', photo: 'https://github.com/Katywenkatwins/advent-marafon/blob/main/KrisElias.png?raw=true' },
+              { name: 'Таня Прозорова', instagram: 'tanyaprozorova_', description: 'Тренерка дихання', photo: 'https://github.com/Katywenkatwins/advent-marafon/blob/main/Prozor.png?raw=true' },
+              { name: 'Оксана Шуфрич', instagram: 'oksana.shufrych', description: 'Психолог, кінезіолог, гіпнотерапевт, трансформаційна менторка для жінок', photo: 'https://github.com/Katywenkatwins/advent-marafon/blob/main/shufr.png?raw=true' },
+              { name: 'Олена Ярема', instagram: 'elena.yarema', description: 'Експертка з розвитку особистого бренду через Instagram', photo: 'https://github.com/Katywenkatwins/advent-marafon/blob/main/432775227_1159328098392853_5798591516054333811_n.jpg?raw=true' },
+              { name: 'Жанна Баграмян', instagram: 'zhanna.bagramian', description: 'Маркетолог та продюсер навчальних проектів. Партнер стартапу HRMNY WOMEN. Co-founder спільноти жінок-лідерок «Заграва». Магістр психології', photo: 'https://github.com/Katywenkatwins/advent-marafon/blob/main/Bagram.png?raw=true' },
             ]} />
           </div>
         </div>
@@ -804,68 +998,23 @@ export function LandingPage({ onStart, isAuthenticated, isLoading, onGoToCalenda
             </p>
           </div>
 
-          {/* Автоскролінг логотипів партнерів */}
-          <div className="relative overflow-hidden py-4">
-            <style dangerouslySetInnerHTML={{
-              __html: `
-                @keyframes scroll-left {
-                  0% { transform: translateX(0); }
-                  100% { transform: translateX(-50%); }
-                }
-                .animate-scroll {
-                  animation: scroll-left 30s linear infinite;
-                }
-                .animate-scroll:hover {
-                  animation-play-state: paused;
-                }
-              `
-            }} />
-            
-            {/* Перший рядок - рух вліво */}
-            <div className="flex gap-8 mb-6 animate-scroll">
-              {[...Array(2)].map((_, setIdx) => (
-                <div key={setIdx} className="flex gap-8 flex-shrink-0">
-                  {PARTNERS_ROW_1.map((partner, idx) => (
-                    <a
-                      key={idx}
-                      href={partner.link || '#'}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`flex items-center justify-center flex-shrink-0 ${partner.name === 'Lebet' ? 'h-20 w-20' : 'h-20 w-40'}`}
-                    >
-                      <ImageWithFallback
-                        src={partner.logo}
-                        alt={partner.name}
-                        className={`grayscale opacity-70 hover:grayscale-0 hover:opacity-100 transition-all duration-300 ${partner.name === 'Lebet' ? 'w-20 h-20 rounded-full object-cover' : 'max-w-full max-h-full object-contain'}`}
-                      />
-                    </a>
-                  ))}
-                </div>
-              ))}
-            </div>
-
-            {/* Другий рядок - рух вліво */}
-            <div className="flex gap-8 mb-6 animate-scroll" style={{ animationDuration: '35s' }}>
-              {[...Array(2)].map((_, setIdx) => (
-                <div key={setIdx} className="flex gap-8 flex-shrink-0">
-                  {PARTNERS_ROW_2.map((partner, idx) => (
-                    <a
-                      key={idx}
-                      href={partner.link || '#'}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`flex items-center justify-center flex-shrink-0 ${partner.name === 'Lebet' ? 'h-20 w-20' : 'h-20 w-40'}`}
-                    >
-                      <ImageWithFallback
-                        src={partner.logo}
-                        alt={partner.name}
-                        className={`grayscale opacity-70 hover:grayscale-0 hover:opacity-100 transition-all duration-300 ${partner.name === 'Lebet' ? 'w-20 h-20 rounded-full object-cover' : 'max-w-full max-h-full object-contain'}`}
-                      />
-                    </a>
-                  ))}
-                </div>
-              ))}
-            </div>
+          {/* Логотипи партнерів */}
+          <div className="flex justify-center items-center gap-8 py-4 px-4 flex-wrap">
+            {PARTNERS.map((partner, idx) => (
+              <a
+                key={idx}
+                href={partner.link || '#'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`flex items-center justify-center flex-shrink-0 ${partner.isRound ? 'h-20 w-20' : 'h-20 w-40'}`}
+              >
+                <ImageWithFallback
+                  src={partner.logo}
+                  alt={partner.name}
+                  className={`grayscale opacity-70 hover:grayscale-0 hover:opacity-100 transition-all duration-300 ${partner.isRound ? 'w-20 h-20 rounded-full object-cover' : 'max-w-full max-h-full object-contain'}`}
+                />
+              </a>
+            ))}
           </div>
 
           <div className="text-center pt-6">
